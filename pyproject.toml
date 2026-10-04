@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guandan-ai"
+version = "0.1.0"
+description = "Cross-platform Guandan desktop game with rule-based AI and optional DeepSeek"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.setuptools]
+py-modules = ["match_runner", "game_series", "gui", "viewer", "card_ui", "play_display", "turn_log", "llm_settings", "llm_dialog"]
+
+[tool.setuptools.packages.find]
+include = ["game_engine*", "agents*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
