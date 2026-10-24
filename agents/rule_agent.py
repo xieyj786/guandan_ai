@@ -10,6 +10,7 @@ from game_engine.card_type import BOMB_TIER_ORDER, CardType, CardTypeCategory, i
 from game_engine.comparator import IncomparableCardTypeError, compare_card_type
 from game_engine.moves import generate_all_moves
 from .base import Action, Agent, Observation
+from .strategy_planner import StrategyOptions, STRATEGY_VERSION, plans, tail_plan
 
 
 
@@ -20,7 +21,15 @@ def _uses_wildcard(move: CardType, level_rank: Rank) -> bool:
 class RuleAgent(Agent):
     """基于公开信息配合队友；保留基础牌型选择及简单逢人配补牌策略。"""
 
+    def __init__(self, name, *, options=None):
+        super().__init__(name)
+        self.options = options or StrategyOptions()
+        self.strategy_version = STRATEGY_VERSION
+        self.decision_trace = {}
+
     def decide(self, observation: Observation) -> Action:
+        self.decision_trace = {"version": self.strategy_version,
+                               "options": vars(self.options).copy()}
         self.decision_reason = "按现有跟牌策略选择最省的有效牌"
         if not observation.hand:
             return Action(action_type="pass")
@@ -45,17 +54,60 @@ class RuleAgent(Agent):
                 threat = (observation.opponent_hand_sizes[0] == 1
                           and observation.last_play.category == CardTypeCategory.SINGLE
                           and observation.last_play.power < ceiling)
+                grouped = {c for m in moves if len(m.cards) > 1 for c in m.cards}
+                low_cost = lambda m: (m.category == CardTypeCategory.SINGLE
+                                     and m.cards[0] not in grouped
+                                     and any(observation.last_play.power < single_card_power(c, observation.level_rank)
+                                             <= m.power for c in unseen))
                 blockers = [m for m in legal if
                             (m.category == CardTypeCategory.SINGLE and m.power >= ceiling)
-                            or is_bomb_category(m.category)] if threat else []
+                            or is_bomb_category(m.category)
+                            or (self.options.risk_interception and low_cost(m))] if threat else []
                 if blockers:
-                    self.decision_reason = "下家报单，接过牌权封堵对手"
+                    self.decision_reason = "[DP04/T08] 下家报单，合理代价降低跟完风险；不保证封死"
+                    # Compare a bomb leaving one final hand before splitting control resources.
+                    for move in blockers:
+                        if self.options.bomb_routes and is_bomb_category(move.category):
+                            tail = tail_plan(observation.hand, move, observation.level_rank,
+                                             observation.use_wildcards)
+                            if len(tail) == 1:
+                                self.decision_reason += "；炸后只剩一手，仍需防反炸"
+                                return Action("play", move.cards)
+                    singles = [m for m in blockers if m.category == CardTypeCategory.SINGLE]
+                    if singles:
+                        return Action("play", max(singles, key=lambda m: m.power).cards)
                     return self._follow(blockers, observation.last_play, observation.level_rank)
                 self.decision_reason = "队友控牌，让牌配合"
                 return Action("pass")
+            ordinary = [m for m in legal if not is_bomb_category(m.category)]
+            if self.options.bomb_routes and legal and not ordinary:
+                routes = [(m, tail_plan(observation.hand, m, observation.level_rank,
+                                       observation.use_wildcards)) for m in legal]
+                move, tail = min(routes, key=lambda item: (len(item[1]),
+                                    BOMB_TIER_ORDER.index(item[0].category), item[0].power))
+                self.decision_trace["bomb_tail_hands"] = len(tail)
+                if len(tail) == 1 or 1 in observation.opponent_hand_sizes:
+                    self.decision_reason = ("[DP02/B01] 炸后剩一手，尾牌无需控场；仍可能被反炸"
+                                            if len(tail) == 1 else
+                                            "[DP03/B01] 对手报单，接受后续困难以争夺牌权")
+                    return Action("play", move.cards)
+                self.decision_reason = "[B01] 炸后仍有多手且无报单急险，保留炸弹"
+                return Action("pass")
+            if self.options.multi_plan and ordinary and len(observation.hand) <= self.options.endgame_cards:
+                # Short endgames: compare actual remainders rather than a frozen opening partition.
+                routes = [(m, tail_plan(observation.hand, m, observation.level_rank,
+                                       observation.use_wildcards)) for m in ordinary]
+                move, tail = min(routes, key=lambda item: (len(item[1]),
+                                    _uses_wildcard(item[0], observation.level_rank), item[0].power))
+                self.decision_reason = "[DP01] 比较跟牌后的分组，优先较短的剩余路线"
+                return Action("play", move.cards)
             return self._follow(moves, observation.last_play, observation.level_rank)
 
-        plan = self._estimate_plan(observation)
+        alternatives = plans(observation.hand, observation.level_rank,
+                             observation.use_wildcards, self.options.multi_plan)
+        # Stable tie-break keeps existing small-group behavior while allowing fewer-hand routes.
+        plan = min(alternatives, key=len)
+        self.decision_trace["plan_sizes"] = [len(p) for p in alternatives]
         if 1 in observation.opponent_hand_sizes:
             multiple = [m for m in plan if len(m.cards) > 1]
             if multiple:

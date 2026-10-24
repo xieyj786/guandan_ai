@@ -12,7 +12,7 @@
 - 黑桃/梅花为 `#101010`；红心/方块为 `#c81018`。
 - 10与单字符点数使用相同字号，避免过小。
 - 红心配加金色外框，选牌加蓝色框并抬高，保留白底。
-- 小王使用黑色星标，大王红色星标，并附“小王/大王”。王的设计为用户认可的补充，原图未包含。
+- 大小王依据 `joker_reference.png` 绘制可缩放小丑图案：小王黑红帽子、黑色 JOKER；大王红黄帽子、红色 JOKER。保留现有牌面比例与状态边框。
 - GUI中的PASS由 `play_display.py` 单独绘制：约三张牌宽，白框贴合粗体文字高度。
   PASS不是牌型，也不改变共享的54种牌面。
 
@@ -44,8 +44,8 @@ original artwork; `preview.svg` is a design preview. Runtime cards are drawn by 
 - Spades/clubs use `#101010`; hearts/diamonds use `#c81018`.
 - Ten uses the same font size as single-character ranks.
 - Heart wild cards have gold borders; selected cards have blue borders and are lifted, retaining white fill.
-- Small joker: black star; big joker: red star, with Chinese joker labels. This is an approved addition
-  because the original reference contains no jokers.
+- Jokers follow `joker_reference.png` using scalable jester paths: a black/red cap and black JOKER
+  for the small joker, a red/yellow cap and red JOKER for the big joker. Card proportions and state borders are retained.
 - GUI PASS is separately drawn by `play_display.py`, about three card widths with a white box fitted
   to the bold text height. It is a status marker, not an additional card type.
 

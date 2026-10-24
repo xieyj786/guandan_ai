@@ -7,7 +7,7 @@
 相关，与手牌张数无关的指数爆炸。
 
 支持百搭补对子、三张和炸弹；候选交由识别器统一确定最终牌型和力度。
-顺子固定 5 张长度（同花顺同样固定 5 张，见 _straight_flushes）；连对/钢板仍支持变长。
+顺子固定 5 张长度（同花顺同样固定 5 张，见 _straight_flushes）；连对固定3对，钢板仍支持变长。
 对子/三张/三带二/炸弹的点数比较会应用级牌提升（rank_power），大王/小王也可以单独
 组成"对大王"/"对小王"这样的普通对子（区别于需要凑齐4张的天王炸）。
 """
@@ -187,7 +187,7 @@ def _consecutive_pairs(rank_groups) -> list[CardType]:
     moves = []
     for start, end in _find_runs(_present_mask(rank_groups, 2)):
         run_len = end - start + 1
-        for length in range(3, run_len + 1):
+        for length in (3,):
             for offset in range(run_len - length + 1):
                 s = start + offset
                 idxs = range(s, s + length)

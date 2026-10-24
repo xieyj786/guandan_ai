@@ -5,7 +5,7 @@
 ## 中文
 
 四人两队掼蛋桌面程序，支持 macOS / Windows、规则 AI、人机对战与可选 DeepSeek。
-本阶段整理日期：2026-10-04。界面语言为中文；本说明及牌面规范均提供中英文。
+最近整理日期：2026-10-24。界面语言为中文；本说明及牌面规范均提供中英文。
 
 ### 启动
 
@@ -61,7 +61,7 @@ py -3 -m venv .venv
   人机模式AI1手动选贡牌、还牌。交换校验失败不提交半完成的自动换牌。
 - 接风：最后出牌者已走完且其余玩家全过，由仍有牌的队友领出。有人压住则正常继续；
   若队友也走完，交给顺序下一位有牌者。
-- 支持单张、对子、三张、三带二、固定五张顺子、三组以上连对、两组以上钢板、4～8炸、同花顺、四王炸。
+- 支持单张、对子、三张、三带二、固定五张顺子、固定三组连对、两组以上钢板、4～8炸、同花顺、四王炸。
   顺子连续序列不含2和王。红心级牌可百搭但不能代王，单出按级牌大小。
   多种解释跟牌时选择能压过上一手的最大解释。详见 [规则说明](rules_design.md)。
 
@@ -108,18 +108,23 @@ macOS补充加载 `/etc/ssl/cert.pem`，不关闭TLS或主机名验证。
 | `agents/` | 观测动作接口、规则AI、DeepSeek及兼容LLM客户端 |
 | `match_runner.py`, `game_series.py` | 单局调度、多局升级 |
 | `gui.py`, `viewer.py` | 人机牌桌、全手牌观察器 |
+| `benchmark.py`, `benchmark_gui.py` | 独立牌局统计、两队配置、日志导出 |
+| `gui.spec` | PyInstaller打包配置，需在目标系统安装打包工具 |
 | `card_ui.py`, `play_display.py`, `turn_log.py` | 共享牌面、PASS、动作日志 |
 | `llm_dialog.py`, `llm_settings.py` | 设置界面、系统凭据、后台调用 |
 | `tests/` | 无外部依赖规则测试和桌面回归 |
 | `assets/card_style/` | 保留原始参考图、预览与[双语规范](assets/card_style/README.md) |
 | [CHANGELOG](CHANGELOG.md) | 本阶段变更与清理记录 |
+| [清理记录](docs/cleanup.md) | 缓存删除清单及哈希、保留项 |
 | [维护说明](docs/maintenance.md) | 接口、验证、遗留限制 |
 | [后续计划](docs/development_plan.md) | 当前状态与明确暂缓的功能 |
+| [Apple平台开发与发布规划](docs/apple_platform_plan.md) | iPhone、iPad、Mac方案及App Store准备（规划阶段） |
 | `docs/archive/` | 历史设计资料，不作为当前功能说明 |
 
 ### 验证与阶段状态
 
-本次核心测试71项通过；以下四组桌面回归全部通过（包括250步一致性和9小局完整人机比赛）。
+2026-10-24本机 macOS（项目 `.venv`，Python 3.13.3）84项核心测试通过。
+以下四组桌面回归的既有记录通过（包括250步一致性和9小局完整人机比赛）；本次未重跑。
 核心测试：`python tests/run_all.py`。桌面会话中分别运行：
 
 ```bash
@@ -131,12 +136,12 @@ python tests/gui_play_status_smoke.py
 
 LLM桌面测试使用模拟网络和凭据，不产生付费调用；Win32读写有模拟测试。
 用户已确认Windows实际运行和DeepSeek真实连接成功；本次整理的自动回归在macOS运行，
-不代表本次再次完成Windows实机验证。250局统计窗口、日志导出和两队不同LLM仍暂缓。
+不代表本次再次完成Windows实机验证。独立牌局统计窗口现见文末入口；旧验证记录不代表新统计程序的结果。
 
 ## English
 
 A four-player, two-team Guandan desktop game for macOS and Windows, with rule-based AI,
-human play and optional DeepSeek decisions. Consolidated on 2026-10-04.
+human play and optional DeepSeek decisions. Last reviewed on 2026-10-24.
 The application UI is Chinese; this README and the card-style README are bilingual.
 
 ### Running
@@ -190,7 +195,7 @@ When a player's final play is followed by passes from all remaining players, the
 receives the lead (接风). Any covering play replaces the last play normally. If the partner has also
 finished, the next active seat leads.
 
-Supported types: singles, pairs, triples, full houses, fixed five-card straights, at least three
+Supported types: singles, pairs, triples, full houses, fixed five-card straights, exactly three
 consecutive pairs, at least two consecutive triples, 4–8-card bombs, straight flushes and four jokers.
 Straight sequences exclude 2 and jokers. Heart level cards are wild but cannot replace jokers;
 a single heart level card retains level strength. Ambiguous responses choose the strongest
@@ -245,12 +250,19 @@ regressions; `assets/card_style/` preserves the reference image and bilingual st
 
 See [CHANGELOG](CHANGELOG.md), [maintenance notes](docs/maintenance.md),
 [current roadmap](docs/development_plan.md) and [card style](assets/card_style/README.md).
+See also the [Apple platform development and distribution plan (Chinese)](docs/apple_platform_plan.md) for proposed iPhone, iPad and Mac versions; these clients are not yet implemented.
 `docs/archive/` contains historical proposals, not current functionality.
 
-This cleanup passed 71 core tests and all four desktop regressions, including 250 matched actions
-and a complete nine-round human-mode series. Run `python tests/run_all.py`, then the four desktop scripts
+On 2026-10-24, all 84 core tests passed on macOS using the project `.venv` (Python 3.13.3).
+Earlier desktop checks passed, including 250 matched actions and a nine-round human-mode series;
+these four desktop checks were not rerun for this directory cleanup. Run `python tests/run_all.py`, then the four desktop scripts
 listed above in a desktop session.
 LLM GUI tests use fake network/credentials and make no paid requests; Windows API boundaries are mocked.
 The user has confirmed Windows operation and a real DeepSeek connection. This documentation-cleanup
-regression runs on macOS, not a new Windows validation. The 250-round benchmark, automatic log export
-and different LLMs for both teams remain deferred.
+regression runs on macOS, not a new Windows validation. The configurable benchmark and log export are now available through benchmark_gui.py; separate compatible LLM endpoints can be selected for each team.
+
+## 独立牌局统计测试 / Independent-round benchmarks
+
+运行 `python benchmark_gui.py`，选择250、500、1000局或自定义局数。支持规则队、LLM队及不同兼容LLM之间对战；详见[测试程序设计](docs/benchmark_design.md)。先用少量局数核实参数和连接，再进行可能计费的LLM批量测试。
+
+Run `python benchmark_gui.py` for configurable independent rounds, natural-pattern statistics and per-run logs. Each team may use rules or a compatible LLM. Start with a small trial; LLM calls may incur charges. See the [design (Chinese)](docs/benchmark_design.md).

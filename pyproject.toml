@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [tool.setuptools]
-py-modules = ["match_runner", "game_series", "gui", "viewer", "card_ui", "play_display", "turn_log", "llm_settings", "llm_dialog"]
+py-modules = ["benchmark", "benchmark_gui", "match_runner", "game_series", "gui", "viewer", "card_ui", "play_display", "turn_log", "llm_settings", "llm_dialog"]
 
 [tool.setuptools.packages.find]
 include = ["game_engine*", "agents*"]

@@ -32,6 +32,7 @@ class DeepSeekAgent(Agent):
         return actions
 
     def decide(self, observation: Observation) -> Action:
+        self.fallback_reason = ""
         actions = self.candidates(observation)
         recommended = self.fallback.decide(observation)
         suggestion = next((i for i, a in enumerate(actions) if a.action_type == recommended.action_type
@@ -75,8 +76,10 @@ class DeepSeekAgent(Agent):
             self.report = f'{self.name}〔DeepSeek〕：{reason or "已选择合法动作"}'
             return actions[index]
         except LLMRequestError as exc:
+            self.fallback_reason = getattr(self.client, "last_error_kind", "") or "api_error"
             # 客户端错误均为经过脱敏的固定说明。
             self.report = f'{self.name}〔规则接管〕：{exc}'
         except (ValueError, TypeError, KeyError):
+            self.fallback_reason = 'invalid_action_json'
             self.report = f'{self.name}〔规则接管〕：模型回答不是有效动作编号'
         return recommended

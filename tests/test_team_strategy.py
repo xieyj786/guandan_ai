@@ -35,7 +35,7 @@ def test_teammate_control_pass_and_finish():
 def test_block_only_immediate_single_threat():
     assert decide([3, 16], [5], opponents=(1, 9), teammate=True).cards == cards(16)
     assert decide([3, 16], [5], opponents=(9, 1), teammate=True).action_type == 'pass'
-    assert decide([3, 14], [5], opponents=(1, 9), teammate=True).action_type == 'pass'
+    assert decide([3, 14], [5], opponents=(1, 9), teammate=True).cards == cards(14)  # DP04: 降低风险即可
     assert decide([3, 15], [16], opponents=(1, 9), teammate=True).action_type == 'pass'
     assert decide([3, 3, 3, 3, 9], [5, 5], opponents=(1, 9), teammate=True).action_type == 'pass'
 

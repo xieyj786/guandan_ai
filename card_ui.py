@@ -12,7 +12,7 @@ BLACK = "#101010"
 RED = "#c81018"
 GOLD = "#e5b94e"
 SELECTED = "#63c9ff"
-STYLE_VERSION = "1.0"
+STYLE_VERSION = "1.1"
 
 # 花色路径采用0～100坐标，M=起点，C=三次贝塞尔曲线，L=直线。
 HEART = [('M', 50, 96), ('C', 43, 83, 2, 57, 2, 29),
@@ -52,6 +52,60 @@ def _points(path):
     return points
 
 
+def _draw_joker(canvas: tk.Canvas, left: float, top: float, width: float,
+                height: float, *, big: bool) -> None:
+    """Scale the reference jester as vector paths, retaining detail at every card size."""
+    scale = width * .86 / 100
+    ox, oy = left + width * .07, top + height * .13
+    red, yellow = '#e60012', '#ffd21f'
+    stroke = max(.7, width * .012)
+
+    def shape(commands, fill):
+        canvas.create_polygon([v for px, py in _points(commands)
+                               for v in (ox + px * scale, oy + py * scale)],
+                              fill=fill, outline=BLACK, width=stroke)
+
+    def oval(x1, y1, x2, y2, fill, outline=BLACK):
+        canvas.create_oval(ox+x1*scale, oy+y1*scale, ox+x2*scale, oy+y2*scale,
+                           fill=fill, outline=outline, width=stroke)
+
+    # Three curved cap points; the black crown identifies the small joker.
+    shape([('M', 28, 58), ('C', 28, 21, 15, 18, 6, 38),
+           ('C', 5, 9, 30, 0, 43, 21), ('C', 43, -7, 76, -8, 83, 20),
+           ('C', 65, 4, 62, 29, 69, 39), ('L', 51, 57)], red)
+    shape([('M', 43, 49), ('C', 36, 26, 41, 3, 59, 0),
+           ('C', 70, -2, 80, 7, 83, 20), ('C', 65, 4, 62, 29, 69, 39),
+           ('L', 52, 58)], red if big else BLACK)
+    shape([('M', 54, 44), ('C', 61, 15, 99, 22, 94, 61),
+           ('C', 88, 36, 74, 39, 71, 64), ('L', 54, 64)], yellow)
+    # Collar lobes and bells.
+    shape([('M', 39, 65), ('C', 20, 61, 15, 72, 12, 82),
+           ('C', 25, 75, 34, 77, 43, 85), ('L', 50, 74)], red if big else BLACK)
+    shape([('M', 59, 65), ('C', 77, 62, 87, 71, 89, 82),
+           ('C', 75, 75, 66, 77, 58, 85), ('L', 50, 74)], red if big else BLACK)
+    shape([('M', 43, 73), ('C', 41, 87, 44, 94, 50, 100),
+           ('C', 58, 90, 62, 82, 58, 73)], red if big else BLACK)
+    shape([('M', 41, 69), ('C', 30, 75, 25, 85, 26, 101),
+           ('C', 40, 91, 45, 82, 49, 75)], yellow if big else red)
+    shape([('M', 58, 69), ('C', 71, 76, 77, 87, 75, 101),
+           ('C', 62, 94, 56, 83, 51, 75)], yellow if big else red)
+    # Heart-shaped face and smiling eyes.
+    shape([('M', 50, 46), ('C', 30, 25, 17, 45, 30, 65),
+           ('C', 38, 79, 61, 81, 70, 63),
+           ('C', 83, 40, 64, 27, 50, 46)], WHITE)
+    for cx in (39, 61):
+        shape([('M', cx-6, 53), ('C', cx-4, 43, cx+4, 43, cx+6, 53),
+               ('C', cx+1, 49, cx-1, 49, cx-6, 53)], BLACK)
+    oval(46, 53, 54, 61, red, '')
+    shape([('M', 39, 63), ('C', 44, 66, 56, 66, 61, 63),
+           ('C', 57, 75, 44, 75, 39, 63)], red)
+    for cx, cy in ((6, 38), (83, 20), (94, 61), (12, 82), (89, 82), (26, 101), (75, 101)):
+        oval(cx-5, cy-5, cx+5, cy+5, yellow)
+    canvas.create_text(left+width/2, top+height*.81, text='JOKER',
+                       fill=red if big else BLACK,
+                       font=('Times New Roman', -max(5, round(width*.24)), 'bold'))
+
+
 def draw_card(canvas: tk.Canvas, suit: str, rank: int, x: float, y: float,
               width: float, height: float, *, wildcard=False, selected=False) -> None:
     """在指定矩形内按1:2比例绘制牌面；高亮只加外框，保留白色牌面。"""
@@ -68,6 +122,9 @@ def draw_card(canvas: tk.Canvas, suit: str, rank: int, x: float, y: float,
               left, bottom, left, bottom-radius, left, top+radius, left, top]
     canvas.create_polygon(coords, smooth=True, splinesteps=16, fill=WHITE,
                           outline=outline, width=2 if selected or wildcard else max(1, w*.012))
+    if rank in (15, 16):
+        _draw_joker(canvas, left, top, w, h, big=rank == 16)
+        return
     color = RED if suit in ('heart', 'diamond') or rank == 16 else BLACK
     sx, sy, size = left+w*.14, top+h*.13, w*.72
 
@@ -82,14 +139,8 @@ def draw_card(canvas: tk.Canvas, suit: str, rank: int, x: float, y: float,
             canvas.create_oval(sx+(cx-r)*size/100, sy+(cy-r)*size/100,
                                sx+(cx+r)*size/100, sy+(cy+r)*size/100, fill=color, outline='')
         path(STEM)
-    else:
-        # 原参考图未包含王：暂用同色星形，明确标出大小王。
-        canvas.create_text(left+w/2, sy+size/2, text='★', fill=color,
-                           font=('Arial', -max(8, round(size*.85))))
-    font_size = w * (.42 if rank in (15, 16) else .74)
-    family = 'Arial' if rank in (15, 16) else 'Times New Roman'
     canvas.create_text(left+w/2, top+h*.72, text=rank_text(rank), fill=color,
-                       font=(family, -max(8, round(font_size)), 'bold'))
+                       font=('Times New Roman', -max(8, round(w*.74)), 'bold'))
 
 
 class CardFace(tk.Canvas):

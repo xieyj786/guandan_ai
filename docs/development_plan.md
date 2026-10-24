@@ -20,13 +20,13 @@ opt-in switch and native credentials on macOS/Windows are implemented.
 
 - 完善复杂红心配候选、跟牌与残局策略，使用具体复盘案例验证，不宣称胜率已提高。
 - 多个LLM座位、两队分别配置不同服务商与密钥。
-- 250局统计窗口与自动日志导出：用户明确暂缓，尚未开发。
+- 独立牌局统计窗口已实现：支持250/500/1000及自定义局数、两队独立LLM配置和日志。详见[统计测试设计](benchmark_design.md)；跨进程续跑和Token统计仍待扩展。
 - 统计方案草案：独立发牌、同牌交换策略、区分天然拥有与实际打出牌型、记录失败接管和用量。
   这些是讨论建议，不是已验收的规则或已实现功能。
 - 搜索、强化学习、Web服务与断点复盘未实现。
 
 Complex wildcard enumeration, follow/endgame strategy, multiple LLM seats/providers and evaluation
-remain future work. The 250-round statistics window and automatic exports are explicitly deferred.
+remain future work. The configurable statistics window and exports are implemented; cross-process resume and token accounting remain future work.
 Paired deals, separate dealt/played card-type counts and fallback/usage reporting are proposals only.
 Search, reinforcement learning, web services and resumable replays are not implemented.
 

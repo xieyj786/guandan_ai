@@ -1,7 +1,41 @@
 # 近期变更 / Recent changes
 
+## 2026-10-24 目录整理 / Directory cleanup
+
+- 删除可再生Python与Finder缓存，记录删除前哈希；保留环境、Windows构建记录、牌面参考图和全部有效功能。
+- 更新README的目录说明与84项本机回归结果；源码、测试、打包配置和文档统一纳入GitHub同步。
+- Removed regenerable caches with an audit trail; preserved environments and local Windows builds. Updated layout and local test status.
+
+## 2026-10-24 固定三连对 / Fixed consecutive pairs
+
+- 连对收紧为三对六张；识别层（含红心配）及AI候选生成同时拒绝四连对及更长连对。钢板不变。
+- Consecutive pairs now require exactly three pairs; recognition and AI generation reject longer runs, including wildcard substitutions. Triple-run rules are unchanged.
+- 本机84项回归通过；未重新生成或实测Windows exe，需在Windows用更新后的源码重新打包。
+- 84 local regressions passed; Windows executables must be rebuilt and tested separately.
+
+## 2026-10-23 独立牌局统计 / Independent-round benchmark
+
+- 新增统计窗口、自定义局数、可选同牌换位、两队兼容LLM配置、自然牌型统计、胜率与日志。
+- Added configurable runs, optional paired swaps, per-team compatible LLM setup, natural-pattern counts, win rates and logs.
+- 支持动作边界暂停/停止；密钥不落盘；明确记录规则回退。
+- Supports pause/stop at action boundaries, memory-only keys and explicit fallback counts.
+
+## 2026-10-21 策略规划 / Strategy planning
+
+- 增加可配置的多方案分组、炸后剩牌评估与队友控牌时的风险拦截；记录原则编号和决策信息。
+- Added configurable alternative partitions, bomb remainder evaluation and risk-reducing partner interception with decision tracing.
+- 新增残局回归；未改变游戏规则，尚无胜率提升验证。
+- Added endgame regressions; game rules are unchanged and playing-strength gains remain unverified.
+
 本阶段截至2026-10-04，按功能归纳，不将尚未实现的方案当作交付。
 Milestone through 2026-10-04; grouped by feature rather than claiming unimplemented proposals.
+
+## 2026-10-20：大小王牌面 / Joker artwork
+
+- 按用户新参考图，用可缩放小丑图案替换五角星；小王黑色 JOKER，大王红色 JOKER。GUI 与 viewer 共用。
+- Replaced joker stars with scalable jester artwork based on the new reference; black JOKER for the small joker and red JOKER for the big joker, shared by GUI and viewer.
+- 保存原图于 `assets/card_style/joker_reference.png`；牌面状态边框和游戏规则保持不变。
+- Preserved the reference image; card state borders and game rules remain unchanged.
 
 ## 规则与对局 / Rules and matches
 

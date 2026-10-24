@@ -19,7 +19,7 @@ class CardTypeCategory(Enum):
     TRIPLE = auto()
     TRIPLE_WITH_PAIR = auto()    # 三带二，3张同点+2张同点
     STRAIGHT = auto()             # 顺子，固定5张连续单张
-    CONSECUTIVE_PAIRS = auto()    # 连对，3连对及以上
+    CONSECUTIVE_PAIRS = auto()    # 连对，固定3对共6张
     PLATE = auto()                # 钢板，2组及以上连续三张
     BOMB_4 = auto()
     BOMB_5 = auto()
