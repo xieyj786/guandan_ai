@@ -91,3 +91,5 @@ Removed only regenerable Python/Finder caches. Preserved source, tests, artwork,
 | `game_engine/__pycache__/tribute.cpython-313.pyc` | 14628 | `38bf1ece1148cf22fe836af3b261ecbc9cd6fc1bd038d7ab135fcb957311f87d` |
 | `game_engine/__pycache__/__init__.cpython-313.pyc` | 491 | `3ad500c279fe2f49a3660e7dd584b65f056e2ffc461c6d47ab82d001d1534d41` |
 | `game_engine/__pycache__/card.cpython-313.pyc` | 5391 | `6b24be17a03e137a46d593a6e89181981613f296fa2ef75f7a687a399719c4cc` |
+
+本次共删除23个缓存文件，201,182字节；macOS与Windows均通过84项核心和五组桌面回归。Windows exe 及校验文件已发布至 Release，本地副本在 `dist/`。

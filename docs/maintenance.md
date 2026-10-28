@@ -51,3 +51,9 @@ original reference artwork must not be treated as disposable project clutter.
 macOS 项目 `.venv`：84 项核心测试及全部五组桌面回归通过，包括 250 步观察器一致性、7 小局完整人机比赛、模拟 LLM、出牌状态和统计窗口。修复小窗口下出牌尺寸约束挤压日志区的问题，恢复 3:2 比例。
 
 Windows 发布流程见 `.github/workflows/windows-release.yml`：Python 3.13 x64、核心和五组桌面回归、PyInstaller 6.16.0、打包后窗口启动检查、SHA-256 及 Release 附件。构建日志是每次 Windows 验证的依据；自动检查不代表人工验收或真实付费 API 测试。
+
+Windows 实际构建已通过：[Actions 40645839353](https://github.com/xieyj786/guandan_ai/actions/runs/40645839353)。84 项核心测试、全部五组桌面回归及打包后掼蛋窗口启动检查通过。
+
+发布标签 `v0.1.0-20261028.2`，源码提交 `907f6c8`。下载附件至本机 `dist/gui.exe` 后，Windows x64 PE 格式和 SHA-256 均核对通过；大小 13,044,224 字节。
+
+SHA-256: `0b22523c3c5aea5449e91ac25ddca1d5fdd72464b2236ab925422f65d416aa8b`。仓库已核实为 Public。

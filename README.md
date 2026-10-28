@@ -40,6 +40,7 @@ py -3 -m venv .venv
 
 Windows 本机构建：`py -m pip install pyinstaller==6.16.0`，再运行 `py -m PyInstaller --clean --noconfirm gui.spec`，产物为 `dist/gui.exe`。
 GitHub Actions 在 Windows 上运行核心与桌面回归、打包并检查 exe 窗口；推送 `v*` 标签自动发布。
+2026-10-28 发布 `v0.1.0-20261028.2` 已通过 Windows 84项核心、五组桌面回归和打包窗口启动检查，详见[发布验证](docs/maintenance.md#2026-10-28-发布验证--release-verification)。
 
 Download `gui.exe` from Releases for Windows x64; Python is not required. The release includes a SHA-256 checksum.
 Build on Windows using the commands above. Tagged releases run tests, package and verify the executable on Windows.
