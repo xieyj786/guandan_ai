@@ -40,11 +40,14 @@ jobs:
               Start-Sleep -Milliseconds 500
               $app.Refresh()
               if ($app.HasExited) { throw "gui.exe exited before opening a window" }
-            } while ($app.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline)
-            if ($app.MainWindowHandle -eq 0) { throw "No GUI window appeared" }
-            Write-Host "Packaged GUI opened: $($app.MainWindowTitle)"
+              # One-file PyInstaller opens the window in a child process.
+              $childIds = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($app.Id)" | Select-Object -ExpandProperty ProcessId)
+              $window = @(Get-Process -Id (@($app.Id) + $childIds) -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -like '掼蛋*' })
+            } while ($window.Count -eq 0 -and (Get-Date) -lt $deadline)
+            if ($window.Count -eq 0) { throw "No game window appeared" }
+            Write-Host "Packaged GUI opened: $($window[0].MainWindowTitle)"
           } finally {
-            if (-not $app.HasExited) { Stop-Process -Id $app.Id }
+            if (-not $app.HasExited) { taskkill /PID $app.Id /T /F }
           }
           $hash = (Get-FileHash dist/gui.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  gui.exe" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
