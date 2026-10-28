@@ -47,7 +47,7 @@ def test_mock_llm_fallback_is_visible_and_secret_not_logged():
             factories=(lambda n:DeepSeekAgent(n,Client()),lambda n:DeepSeekAgent(n,Client())))
         result=run.run()
         assert result['fallback_decisions']==3
-        assert 'sk-secret-test' not in (run.folder/'events.jsonl').read_text()
+        assert 'sk-secret-test' not in (run.folder/'events.jsonl').read_text(encoding='utf-8')
 
 
 def test_compatible_deepseek_payload_and_diagnostics():

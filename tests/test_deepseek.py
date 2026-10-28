@@ -99,7 +99,7 @@ def test_macos_system_ca_keeps_verification_enabled():
          patch('agents.llm_client.sys.platform', 'darwin'), \
          patch('agents.llm_client.Path.is_file', return_value=True):
         _tls_context()
-        factory.return_value.load_verify_locations.assert_called_once_with(cafile='/etc/ssl/cert.pem')
+        factory.return_value.load_verify_locations.assert_called_once_with(cafile=str(Path('/etc/ssl/cert.pem')))
 
 
 def test_connection_failures_are_distinct_and_redacted():

@@ -4,6 +4,7 @@
 
 - 保留并整理现有出牌尺寸、看AI对战按钮、人工动作闪烁提示改进。
 - 修正文档过时的统计功能说明，增加 Windows 自动测试、打包、窗口检查与 Release 附件流程。
+- 修复 Windows 回归中的 UTF-8 日志读取与模拟 macOS 证书路径断言。
 - Preserve current GUI improvements; refresh documentation and add Windows release automation.
 
 
