@@ -44,3 +44,10 @@ from a new Windows validation. Do not copy virtual environments across operating
 Both READMEs are bilingual. Preserve historical plans and adaptation evidence; use current rules
 for behavior. See [cleanup](cleanup.md) for removed files and hashes. Credentials, environments and
 original reference artwork must not be treated as disposable project clutter.
+
+
+## 2026-10-28 发布验证 / Release verification
+
+macOS 项目 `.venv`：84 项核心测试及全部五组桌面回归通过，包括 250 步观察器一致性、7 小局完整人机比赛、模拟 LLM、出牌状态和统计窗口。修复小窗口下出牌尺寸约束挤压日志区的问题，恢复 3:2 比例。
+
+Windows 发布流程见 `.github/workflows/windows-release.yml`：Python 3.13 x64、核心和五组桌面回归、PyInstaller 6.16.0、打包后窗口启动检查、SHA-256 及 Release 附件。构建日志是每次 Windows 验证的依据；自动检查不代表人工验收或真实付费 API 测试。

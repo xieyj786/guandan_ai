@@ -1,7 +1,7 @@
 # 当前状态与后续计划 / Status and roadmap
 
-整理于2026-10-04。本阶段暂告一段，不在文档整理期间新增游戏功能。
-Consolidated 2026-10-04. This milestone is paused; documentation cleanup adds no game features.
+整理于2026-10-28。本阶段暂告一段，不在文档整理期间新增游戏功能。
+Consolidated 2026-10-28. This milestone is paused; documentation cleanup adds no game features.
 
 ## 已完成 / Completed
 
@@ -21,13 +21,12 @@ opt-in switch and native credentials on macOS/Windows are implemented.
 - 完善复杂红心配候选、跟牌与残局策略，使用具体复盘案例验证，不宣称胜率已提高。
 - 多个LLM座位、两队分别配置不同服务商与密钥。
 - 独立牌局统计窗口已实现：支持250/500/1000及自定义局数、两队独立LLM配置和日志。详见[统计测试设计](benchmark_design.md)；跨进程续跑和Token统计仍待扩展。
-- 统计方案草案：独立发牌、同牌交换策略、区分天然拥有与实际打出牌型、记录失败接管和用量。
-  这些是讨论建议，不是已验收的规则或已实现功能。
+- 统计程序已有独立发牌、同牌换位、天然牌型和失败接管记录；Token用量统计仍未实现。
 - 搜索、强化学习、Web服务与断点复盘未实现。
 
-Complex wildcard enumeration, follow/endgame strategy, multiple LLM seats/providers and evaluation
+Complex wildcard enumeration, follow/endgame strategy, multiple LLM seats in the main game and further evaluation
 remain future work. The configurable statistics window and exports are implemented; cross-process resume and token accounting remain future work.
-Paired deals, separate dealt/played card-type counts and fallback/usage reporting are proposals only.
+Paired deals, natural-pattern counts and fallback reporting are implemented; token usage accounting remains pending.
 Search, reinforcement learning, web services and resumable replays are not implemented.
 
 早期计划原文保留在 [历史计划](archive/development_plan_v0.1.md)，其中的问题和范围不代表当前状态。

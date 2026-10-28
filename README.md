@@ -5,7 +5,7 @@
 ## 中文
 
 四人两队掼蛋桌面程序，支持 macOS / Windows、规则 AI、人机对战与可选 DeepSeek。
-最近整理日期：2026-10-24。界面语言为中文；本说明及牌面规范均提供中英文。
+最近整理日期：2026-10-28。界面语言为中文；本说明及牌面规范均提供中英文。
 
 ### 启动
 
@@ -33,19 +33,30 @@ py -3 -m venv .venv
 
 也可在合适的虚拟环境内直接使用 `python gui.py`。代码可同步，虚拟环境和密钥不跨系统复制。
 
+### Windows 可执行文件 / Windows executable
+
+从 [GitHub Releases](https://github.com/xieyj786/guandan_ai/releases/latest) 下载 `gui.exe`，无需安装 Python。
+这是 Windows x64 程序，不能在 macOS 运行。发布附件 `SHA256SUMS.txt` 提供校验值。
+
+Windows 本机构建：`py -m pip install pyinstaller==6.16.0`，再运行 `py -m PyInstaller --clean --noconfirm gui.spec`，产物为 `dist/gui.exe`。
+GitHub Actions 在 Windows 上运行核心与桌面回归、打包并检查 exe 窗口；推送 `v*` 标签自动发布。
+
+Download `gui.exe` from Releases for Windows x64; Python is not required. The release includes a SHA-256 checksum.
+Build on Windows using the commands above. Tagged releases run tests, package and verify the executable on Windows.
+
 ### GUI 与操作
 
 - AI1下方、AI2右方、AI3上方、AI4左方；AI1/AI3为A队，AI2/AI4为B队。
-- “新局”重新开始观察比赛；“单步”推进一手，“自动播放”连续运行，再按暂停。
+- “新局”重新开始观察比赛；“单步”推进一手，“看AI对战”连续运行，再按暂停。
   播放中按单步先暂停。GUI隐藏AI2～AI4手牌；viewer显示四家手牌。
 - “人机对战”从2开始新比赛，AI1由人操作。轮到AI1时暂停等待，合法动作后自动继续。
-  “出牌、过牌、进贡、还贡”按阶段启用；使用紧凑按钮、Arial 12号粗体、金色可用文字、灰色禁用文字，上方留白。
+  “出牌、过牌、进贡、还贡”按阶段启用；使用紧凑按钮、Arial 12号粗体、金色可用文字、灰色禁用文字，上方留白；轮到人工时可用按钮闪烁提示。
 - 中央出牌区占3/5，记录区占2/5。四个出牌框保持上下左右布局；AI2标题靠右，其余靠左。
 - 每局开始四家等待；首个动作后仅当前行动者显示“等待出牌”，未行动的其他玩家留空。
   已行动者保留上一手牌或PASS，收回牌权不清空全桌。出完显示头游、二游、三游、末游。
 - PASS约三张牌宽，白色圆角框高度贴合大字。AI1初始27张牌一行显示；收贡时可暂时有28张。
 - 日志共用 `turn_log.py`，包含动作、排名、接风、规则理由、进还贡及升级。
-  当前为窗口内日志；自动导出和统计窗口尚未实现。
+  牌桌日志显示在窗口内；独立统计窗口 `benchmark_gui.py` 支持日志导出。
 
 ### 游戏规则
 
@@ -123,8 +134,8 @@ macOS补充加载 `/etc/ssl/cert.pem`，不关闭TLS或主机名验证。
 
 ### 验证与阶段状态
 
-2026-10-24本机 macOS（项目 `.venv`，Python 3.13.3）84项核心测试通过。
-以下四组桌面回归的既有记录通过（包括250步一致性和9小局完整人机比赛）；本次未重跑。
+2026-10-28本机 macOS（项目 `.venv`，Python 3.13.3）84项核心测试通过。
+本次五组桌面回归全部通过，包括250步观察器一致性、7小局完整人机比赛、模拟LLM、出牌状态与统计窗口。
 核心测试：`python tests/run_all.py`。桌面会话中分别运行：
 
 ```bash
@@ -141,7 +152,7 @@ LLM桌面测试使用模拟网络和凭据，不产生付费调用；Win32读写
 ## English
 
 A four-player, two-team Guandan desktop game for macOS and Windows, with rule-based AI,
-human play and optional DeepSeek decisions. Last reviewed on 2026-10-24.
+human play and optional DeepSeek decisions. Last reviewed on 2026-10-28.
 The application UI is Chinese; this README and the card-style README are bilingual.
 
 ### Running
@@ -155,7 +166,7 @@ environment on each platform; never reuse the macOS `.venv` on Windows.
 ### Controls and display
 
 - AI1 sits below, AI2 right, AI3 above and AI4 left. AI1/AI3 form team A; AI2/AI4 form team B.
-- New Game restarts observer mode. Single Step advances one action; during autoplay it first pauses.
+- Watch AI (看AI对战) starts autoplay. New Game restarts observer mode. Single Step advances one action; during autoplay it first pauses.
   GUI hides AI2–AI4 hands; viewer reveals all hands.
 - Human Play starts a new series at level 2. AI1 selects cards and uses Play, Pass, Tribute or Return.
   Other players advance automatically until the next human action. Buttons are compact, Arial 12 bold,
@@ -168,7 +179,7 @@ environment on each platform; never reuse the macOS `.venv` on Windows.
 - PASS is about three card widths, with a white rounded box fitted to the text height.
   AI1's initial 27 cards fit on one row; receiving tribute may temporarily produce 28 cards.
 - Shared on-screen logs include actions, ranks, lead transfer, rule-AI reasons, tribute and advancement.
-  Automatic log-file export and the statistics window are not implemented.
+  Table logs remain on screen; the separate benchmark window supports log exports.
 
 ### Rules
 
@@ -253,9 +264,8 @@ See [CHANGELOG](CHANGELOG.md), [maintenance notes](docs/maintenance.md),
 See also the [Apple platform development and distribution plan (Chinese)](docs/apple_platform_plan.md) for proposed iPhone, iPad and Mac versions; these clients are not yet implemented.
 `docs/archive/` contains historical proposals, not current functionality.
 
-On 2026-10-24, all 84 core tests passed on macOS using the project `.venv` (Python 3.13.3).
-Earlier desktop checks passed, including 250 matched actions and a nine-round human-mode series;
-these four desktop checks were not rerun for this directory cleanup. Run `python tests/run_all.py`, then the four desktop scripts
+On 2026-10-28, all 84 core tests passed on macOS using the project `.venv` (Python 3.13.3).
+All five desktop scripts passed locally, including 250 matched observer actions, a seven-round human-mode series, mocked LLM, play status and benchmark checks. Run `python tests/run_all.py`, then the four desktop scripts
 listed above in a desktop session.
 LLM GUI tests use fake network/credentials and make no paid requests; Windows API boundaries are mocked.
 The user has confirmed Windows operation and a real DeepSeek connection. This documentation-cleanup

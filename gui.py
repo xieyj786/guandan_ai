@@ -29,7 +29,7 @@ class GuandanGUI:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("掼蛋 · 对局观察器")
-        self.root.geometry("1200x780")
+        self.root.geometry("1200x850")
         self.root.minsize(1000, 680)
         self.root.configure(bg=self.BG)
         self.llm_settings = LLMSettings.load()
@@ -43,6 +43,9 @@ class GuandanGUI:
         self.closed = False
         self.running = False
         self.after_id: str | None = None
+        self.action_flash_id: str | None = None
+        self.action_flash_on = False
+        self.action_highlights = {}
         self.human_mode = False
         self.failed = False
         self.seed = 42
@@ -68,6 +71,13 @@ class GuandanGUI:
                         padding=(10, vertical_padding))
         style.map("GameAction.TButton", foreground=[("disabled", "#888888"),
                                                    ("!disabled", self.GOLD)])
+        # A coloured frame remains visible even when the native ttk theme ignores
+        # button background colours (notably on macOS).
+        for name, foreground in (("PromptOn", "#fff4b8"), ("PromptOff", self.GOLD)):
+            style.configure(f"{name}.GameAction.TButton", font=self.action_font,
+                            padding=(10, vertical_padding))
+            style.map(f"{name}.GameAction.TButton",
+                      foreground=[("disabled", "#888888"), ("!disabled", foreground)])
         top = tk.Frame(self.root, bg="#092521", height=82)
         top.pack(fill="x")
         tk.Label(top, text="掼蛋", font=("Microsoft YaHei UI", 19, "bold"), fg="white", bg="#092521").pack(side="left", padx=22)
@@ -81,14 +91,14 @@ class GuandanGUI:
         controls.pack(fill="x", padx=14, pady=(4, 0))
         self.control_buttons = {}
         for text, command in (("新局", self.new_game), ("单步", self.single_step),
-                              ("自动播放", self.toggle_auto), ("人机对战", self.start_human_game),
+                              ("看AI对战", self.toggle_auto), ("人机对战", self.start_human_game),
                               ("LLM设置", self.open_llm_settings)):
             button = ttk.Button(controls, text=text, command=command, width=8)
             button.pack(side="left", padx=2)
             self.control_buttons[text] = button
         self.llm_switch = ttk.Checkbutton(controls, text="接入 LLM", variable=self.llm_enabled, command=self._toggle_llm)
         self.llm_switch.pack(side="left", padx=12)
-        self.auto_button = self.control_buttons["自动播放"]
+        self.auto_button = self.control_buttons["看AI对战"]
         self.table = tk.Frame(self.root, bg=self.BG)
         self.table.pack(fill="both", expand=True, padx=12, pady=10)
         self.table.columnconfigure(0, minsize=125)
@@ -152,6 +162,14 @@ class GuandanGUI:
         self.log.tag_configure("team_a", foreground=self.TEAM_YELLOW)
         self.log.tag_configure("team_b", foreground=self.TEAM_BLUE)
 
+    def _resize_play_cards(self, event):
+        # Hand cells use 27 columns, 2px horizontal and 5px vertical padding.
+        hand_width = min(max(1, event.width / 27 - 6), (82 - 5 - 4) / 2)
+        target = hand_width * 2 / 3
+        for faces in self.play_faces.values():
+            faces.set_card_width(target)
+        # Keep the configured 3:2 split; PlayStrip fits cards to available space.
+
     def _resize_play_label(self, event: tk.Event) -> None:
         widget = event.widget
         if isinstance(widget, tk.Label):
@@ -169,7 +187,7 @@ class GuandanGUI:
         self.active_llm_settings = replace(self.llm_settings, enabled=self.llm_enabled.get())
         self.human_mode = human_mode
         self.failed = False
-        for name in ("单步", "自动播放"):
+        for name in ("单步", "看AI对战"):
             self.control_buttons[name].configure(state="disabled" if human_mode else "normal")
         self.seed += 1
         self.round_number = 0
@@ -255,6 +273,7 @@ class GuandanGUI:
         return ('PASS' if self.player_plays[index] == '过牌' else ''), []
 
     def _draw_hand(self):
+        self._stop_action_flash()
         m = self.match
         if m is None:
             return
@@ -262,6 +281,7 @@ class GuandanGUI:
         self.hand_row = tk.Frame(frame, bg=self.PANEL, height=82)
         self.hand_row.pack(fill="x", padx=2, pady=5)
         self.hand_row.grid_propagate(False)
+        self.hand_row.bind("<Configure>", self._resize_play_cards)
         for col in range(max(27, len(m.hands[0]))):
             self.hand_row.columnconfigure(col, weight=1, uniform="cards")
         self.hand_row.rowconfigure(0, weight=1)
@@ -288,14 +308,45 @@ class GuandanGUI:
                     "进贡": lambda: self._submit_exchange("tribute"),
                     "还贡": lambda: self._submit_exchange("return")}
         for name in ("出牌", "过牌", "进贡", "还贡"):
-            button = ttk.Button(actions, text=name, command=commands[name],
+            highlight = tk.Frame(actions, bg=self.PANEL)
+            highlight.pack(side="left", padx=4, pady=(10, 0))
+            button = ttk.Button(highlight, text=name, command=commands[name],
                                 style="GameAction.TButton", width=7,
                                 state="normal" if states[name] and not self.failed else "disabled")
-            button.pack(side="left", padx=4, pady=(10, 0))
+            button.pack(padx=3, pady=3)
             self.action_buttons[name] = button
+            self.action_highlights[name] = highlight
         hint = "点击手牌选择，再点击对应动作" if self.human_mode else "AI观察模式 · AI1由程序控制"
         tk.Label(actions, text=hint, bg=self.PANEL, fg="#b9d6ce",
                  font=("Arial", 10)).pack(side="left", padx=12)
+        self._flash_action_buttons()
+
+    def _stop_action_flash(self):
+        """Cancel the previous timer before redrawing or destroying its widgets."""
+        if self.action_flash_id is not None:
+            self.root.after_cancel(self.action_flash_id)
+            self.action_flash_id = None
+        self.action_flash_on = False
+        self.action_highlights = {}
+
+    def _flash_action_buttons(self):
+        """Pulse every enabled human action together; never hide the button text."""
+        self.action_flash_id = None
+        waiting = (not self.closed and self.human_mode and not self.failed
+                   and not self.series_finished and self.match is not None
+                   and (self._human_can_play() or self._pending_exchange_kind() is not None))
+        enabled = [name for name, button in self.action_buttons.items()
+                   if waiting and str(button.cget("state")) != "disabled"]
+        self.action_flash_on = bool(enabled) and not self.action_flash_on
+        for name, highlight in self.action_highlights.items():
+            active = name in enabled
+            highlight.configure(bg=("#ffe66d" if self.action_flash_on else "#92723c")
+                                if active else self.PANEL)
+            self.action_buttons[name].configure(
+                style=("PromptOn.GameAction.TButton" if self.action_flash_on else
+                       "PromptOff.GameAction.TButton") if active else "GameAction.TButton")
+        if enabled:
+            self.action_flash_id = self.root.after(550, self._flash_action_buttons)
 
     def _human_can_play(self):
         return (self.human_mode and self.match is not None and not self.failed
@@ -488,7 +539,7 @@ class GuandanGUI:
             self.root.after_cancel(self.after_id)
             self.after_id = None
         if hasattr(self, "auto_button"):
-            self.auto_button.configure(text="自动播放")
+            self.auto_button.configure(text="看AI对战")
 
     def _advance_one(self):
         if not self.match or self.series_finished or self.failed:
@@ -597,6 +648,7 @@ class GuandanGUI:
 
     def close(self):
         self.closed = True
+        self._stop_action_flash()
         if self.llm_dialog is not None and not self.llm_dialog.closed:
             self.llm_dialog.close()
         self._pause()

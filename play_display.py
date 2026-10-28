@@ -1,10 +1,11 @@
 """牌桌动作展示：沿用共享牌面，PASS 使用约三张牌宽的醒目标识。"""
-from card_ui import CardStrip, WHITE, BLACK
+from card_ui import CardStrip, WHITE, BLACK, draw_card
 
 
 class PlayStrip(CardStrip):
     def __init__(self, master, **kwargs):
         self.status_text = ''
+        self.target_card_width = None
         super().__init__(master, **kwargs)
 
     def set_status(self, text):
@@ -16,7 +17,23 @@ class PlayStrip(CardStrip):
             self.status_text = ''
         super().set_cards(cards, level_rank)
 
+    def set_card_width(self, width):
+        self.target_card_width = max(1, width)
+        self._paint()
+
     def _paint(self):
+        if self.cards and self.target_card_width is not None:
+            self.delete('all')
+            width, height = self.winfo_width(), self.winfo_height()
+            # Keep full cards visible; shrink only when the entire group cannot fit.
+            face_width = min(self.target_card_width, max(0, (height-4)/2),
+                             max(0, width/len(self.cards)-4))
+            cell = face_width + 4
+            offset = (width-cell*len(self.cards))/2
+            for index, (suit, rank) in enumerate(self.cards):
+                draw_card(self, suit, rank, offset+index*cell, 0, cell, height,
+                          wildcard=suit == 'heart' and rank == self.level_rank)
+            return
         super()._paint()
         if self.cards or not self.status_text:
             return

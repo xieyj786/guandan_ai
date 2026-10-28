@@ -1,5 +1,18 @@
 # 近期变更 / Recent changes
 
+## 2026-10-28 发布整理 / Release preparation
+
+- 保留并整理现有出牌尺寸、看AI对战按钮、人工动作闪烁提示改进。
+- 修正文档过时的统计功能说明，增加 Windows 自动测试、打包、窗口检查与 Release 附件流程。
+- Preserve current GUI improvements; refresh documentation and add Windows release automation.
+
+
+## 2026-10-25 出牌尺寸 / Played card size
+
+- GUI出牌以AI1手牌宽高的2/3为目标，窗口默认高度增至850；四方布局与3:2区域比例保留，空间不足时整组缩小以免裁切。
+- Played cards target two-thirds of the human hand size; default window height is 850. Existing layout remains, with fit-to-space fallback.
+
+
 ## 2026-10-24 目录整理 / Directory cleanup
 
 - 删除可再生Python与Finder缓存，记录删除前哈希；保留环境、Windows构建记录、牌面参考图和全部有效功能。
@@ -53,12 +66,12 @@ Milestone through 2026-10-04; grouped by feature rather than claiming unimplemen
 - GUI观察与人机模式；AI1人工、其他自动，轮到人工即等待；暂停、新局及关闭清理计时器。
 - AI1下/AI2右/AI3上/AI4左，AI1一行27张；GUI隐藏他人手牌，viewer显示全部。
 - 中央3:2分配，四框固定位置；只有当前玩家等待，其他保留上一手，显示游次与接风。
-- 共用白底圆角牌面，花色在上点数在下，10字号增大，大小王为红/黑星标，红心配和选牌高亮。
+- 共用白底圆角牌面，花色在上点数在下，10字号增大，大小王为红/黑小丑图案，红心配和选牌高亮。
 - PASS扩为三张牌宽后收紧白框高度。操作按钮多次调整为紧凑宽高、上方留白、Arial 12粗体金色。
 
 Observer/human modes, stable timers, cross-shaped seating, hidden opponent hands, a 3:2 center split,
 persistent action displays and finish ranks are complete. Shared card art includes larger tens and
-colored joker stars. PASS is wide but vertically compact; action buttons are compact gold bold text.
+colored jester artwork. PASS is wide but vertically compact; action buttons are compact gold bold text.
 
 ## 规则 AI / Rule AI
 

@@ -39,7 +39,7 @@ gui.seed = 100  # 固定覆盖新策略下的进贡和还贡
 gui.start_human_game()
 assert gui.human_mode
 assert gui.match.current_player == gui.match.opening_deal.first_player
-assert str(gui.control_buttons['自动播放'].cget('state')) == 'disabled'
+assert str(gui.control_buttons['看AI对战'].cget('state')) == 'disabled'
 assert len(gui.action_buttons) == 4
 counts = {'play': 0, 'pass': 0, 'tribute': 0, 'return': 0}
 for step in range(20000):
