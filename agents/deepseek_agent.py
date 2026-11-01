@@ -5,10 +5,11 @@ import json
 from typing import Protocol
 from collections import Counter
 from agents.base import Action, Agent, Observation
+from agents.local_prompt import fast_prompt
 from agents.llm_client import LLMRequestError
 from agents.rule_agent import RuleAgent
 from game_engine.card import card_display
-from game_engine.moves import generate_all_moves
+from agents.llm_actions import legal_actions
 
 
 class ChatClient(Protocol):
@@ -21,19 +22,20 @@ class DeepSeekAgent(Agent):
         self.client = client
         self.fallback = RuleAgent(name)
         self.report = ""
+        self.last_decision_kind = ""
 
     def candidates(self, obs: Observation) -> list[Action]:
-        moves = generate_all_moves(obs.hand, obs.level_rank, use_wildcards=obs.use_wildcards,
-                                   last_play=obs.last_play)
-        actions = [Action('play', m.cards) for m in moves if obs.last_play is None or
-                   RuleAgent._beats(m, obs.last_play, obs.level_rank)]
-        if obs.last_play is not None:
-            actions.append(Action('pass'))
-        return actions
+        return legal_actions(obs)
 
     def decide(self, observation: Observation) -> Action:
         self.fallback_reason = ""
+        self.last_decision_kind = ""
         actions = self.candidates(observation)
+        if len(actions) == 1:
+            self.last_decision_kind = 'automatic'
+            self.report = f'{self.name}〔唯一合法动作自动执行〕：无需调用模型'
+            return actions[0]
+        self.last_decision_kind = 'llm'
         recommended = self.fallback.decide(observation)
         suggestion = next((i for i, a in enumerate(actions) if a.action_type == recommended.action_type
                            and Counter(a.cards) == Counter(recommended.cards)), None)
@@ -52,13 +54,27 @@ class DeepSeekAgent(Agent):
             '合法动作': [{'id': i, 'action': a.action_type,
                         'cards': [card_display(c) for c in a.cards]} for i, a in enumerate(actions)],
         }
+        fast = getattr(self.client, 'speed_mode', False)
+        local_request = fast_prompt(state, observation.level_rank, observation.use_wildcards) if fast else None
+        compact = getattr(self.client, 'provider_name', '') == 'LM Studio'
+        if compact:
+            # Preserve every card, count, action ID and all 16 history entries.
+            # Only the serialization changes; no candidate pruning or hidden data.
+            state['手牌'] = ' '.join(state['手牌'])
+            state['当前牌'] = ' '.join(state['当前牌'])
+            state['合法动作'] = {str(action['id']): ' '.join(action['cards'])
+                                 for action in state['合法动作']}
         prompt = ('你是掼蛋玩家。只根据自己的手牌和公开信息决策，不猜看不到的手牌。'
                   '红心级牌为逢人配，两副牌。合法动作已由引擎验证，不自行添加动作。'
                   '优先一手走完；队友控牌默认让牌，但可直接走完或封堵报单的下家。'
                   '队友报单时，自己牌弱且超过三手才走完则送现成小散单；有控制牌时按自身计划。'
                   '对手报单避免喂小单。规则推荐供参考。'
-                  '只输出 JSON：{"action_id": 整数编号, "reason": "一句简短策略说明"}。\n'
-                  + json.dumps(state, ensure_ascii=False))
+                  '只输出 JSON：{"action_id": 整数编号, "reason": "一句简短策略说明"}。'
+                  + ('牌张以空格分隔；合法动作的键是编号，值是牌张，空串表示过牌。' if compact else '')
+                  + '\n' + json.dumps(state, ensure_ascii=False,
+                                        separators=(',', ':') if compact else None))
+        if local_request is not None:
+            prompt = local_request
         try:
             data = json.loads(self.client.chat(prompt))
             if not isinstance(data, dict) or type(data.get('action_id')) is not int:
@@ -73,7 +89,7 @@ class DeepSeekAgent(Agent):
             import re
             reason = re.sub(r'sk-[\w-]+', '[密钥已隐藏]', reason)
             reason = ' '.join(reason.split())[:120]
-            self.report = f'{self.name}〔DeepSeek〕：{reason or "已选择合法动作"}'
+            self.report = f'{self.name}〔{getattr(self.client, "provider_name", "DeepSeek")}〕：{reason or f"已选择合法动作{index}"}'
             return actions[index]
         except LLMRequestError as exc:
             self.fallback_reason = getattr(self.client, "last_error_kind", "") or "api_error"
@@ -82,4 +98,5 @@ class DeepSeekAgent(Agent):
         except (ValueError, TypeError, KeyError):
             self.fallback_reason = 'invalid_action_json'
             self.report = f'{self.name}〔规则接管〕：模型回答不是有效动作编号'
+        self.last_decision_kind = 'fallback'
         return recommended

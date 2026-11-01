@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   push:
     tags: ['v*']
+    branches: ['codex/windows-build-*']
 permissions:
   contents: write
 jobs:
@@ -22,7 +23,7 @@ jobs:
       - name: Desktop regressions
         shell: pwsh
         run: |
-          foreach ($test in @('gui_smoke', 'gui_modes_smoke', 'gui_llm_smoke', 'gui_play_status_smoke', 'benchmark_gui_smoke')) {
+          foreach ($test in @('gui_smoke', 'gui_modes_smoke', 'gui_llm_smoke', 'gui_llm_features_smoke', 'gui_play_status_smoke', 'benchmark_gui_smoke')) {
             python "tests/$test.py"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }

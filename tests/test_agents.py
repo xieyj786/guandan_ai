@@ -60,7 +60,8 @@ def test_llm_agent_actually_calls_client_chat():
     client = FakeLLMClient(response='{"think": "过一手", "action": "pass", "cards": []}')
     agent = LLMAgent(name="TestAgent", client=client)
 
-    action = agent.decide(make_observation())
+    last = CardType(category=CardTypeCategory.SINGLE, cards=[], power=4.0, length=1)
+    action = agent.decide(make_observation(last_play=last))
 
     assert client.call_count == 1, "LLMAgent 必须真正调用 client.chat()，而不是静默跳过"
     assert client.last_prompt is not None and "手牌" in client.last_prompt
@@ -157,3 +158,24 @@ if __name__ == "__main__":
             traceback.print_exc()
             failed += 1
     print(f"\n{passed} passed, {failed} failed")
+
+
+def test_legacy_llm_skips_unique_action_and_rejects_illegal_lead_pass():
+    client=FakeLLMClient(response='{"action":"pass"}')
+    agent=LLMAgent('legacy',client)
+    action=agent.decide(make_observation(hand=[Card(Suit.SPADE,Rank.THREE)]))
+    assert action.cards==[Card(Suit.SPADE,Rank.THREE)] and client.call_count==0
+    assert agent.last_decision_kind=='automatic'
+    action=agent.decide(make_observation())
+    assert action.action_type=='play' and agent.last_decision_kind=='fallback'
+    assert agent.fallback_reason=='invalid_action_json'
+
+
+def test_legacy_llm_rejects_non_beating_play_and_malformed_objects():
+    last=CardType(category=CardTypeCategory.SINGLE,cards=[],power=6.0,length=1)
+    for response in ('{"action":"play","cards":["♠3"]}', '[]', 'null',
+                     '{"action":"play","cards":[3]}'):
+        agent=LLMAgent('legacy',FakeLLMClient(response=response))
+        action=agent.decide(make_observation(last_play=last))
+        assert agent.last_decision_kind=='fallback'
+        assert action.cards==[Card(Suit.CLUB,Rank.KING)]

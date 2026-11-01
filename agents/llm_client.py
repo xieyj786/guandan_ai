@@ -23,6 +23,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from .request_metrics import measured_post
 
 
 class LLMRequestError(Exception):
@@ -143,7 +144,7 @@ class CozeLLMClient(BaseLLMClient):
             "auto_save_history": True,
             "messages": [{"role": "user", "content": prompt, "content_type": "text"}],
         }
-        data = _post_json(url, self.headers, payload)
+        data = measured_post(self, _post_json, url, self.headers, payload)
         messages = (data.get("data") or {}).get("messages") or []
         for msg in messages:
             if msg.get("role") == "assistant" and msg.get("type") == "answer":
@@ -170,9 +171,28 @@ class DeepSeekLLMClient(BaseLLMClient):
         url = f"{self.base_url}/chat/completions"
         payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "stream": False,
                    "thinking": {"type": "disabled"}, "response_format": {"type": "json_object"},
-                   "max_tokens": 256}
-        data = _post_json(url, self.headers, payload, timeout=self.timeout)
-        choices = data.get("choices") or []
-        if choices:
-            return choices[0].get("message", {}).get("content", "")
-        return ""
+                   "max_tokens": 512}
+        self.last_error_kind = ''
+        try:
+            data = measured_post(self, _post_json, url, self.headers, payload, timeout=self.timeout)
+        except LLMRequestError:
+            self.last_error_kind = 'api_error'
+            raise
+        except Exception:
+            self.last_error_kind = 'transport_error'
+            raise LLMRequestError('API传输失败') from None
+        try:
+            choice = data['choices'][0]
+            if choice.get('finish_reason') == 'length':
+                self.last_error_kind = 'truncated'
+                raise LLMRequestError('模型输出达到长度上限，未作为有效决策使用')
+            content = choice['message']['content']
+            if not isinstance(content, str) or not content.strip():
+                self.last_error_kind = 'empty_content'
+                raise LLMRequestError('模型未返回有效正文')
+            return content
+        except LLMRequestError:
+            raise
+        except (KeyError, IndexError, TypeError, AttributeError):
+            self.last_error_kind = 'invalid_response'
+            raise LLMRequestError('服务返回结构不符合接口约定') from None

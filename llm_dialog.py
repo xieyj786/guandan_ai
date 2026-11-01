@@ -1,10 +1,10 @@
-"""DeepSeek 本机配置窗口。密钥只在用户点击读取或保存时访问钥匙串。"""
+"""DeepSeek / LM Studio 本机配置窗口。密钥只在用户点击读取或保存时访问钥匙串。"""
 from __future__ import annotations
 import json
 import tkinter as tk
 from tkinter import ttk
 from agents.llm_client import DeepSeekLLMClient, LLMRequestError, validate_api_key
-from llm_settings import LLMSettings, Keychain, KeychainError, background, credential_store_name
+from llm_settings import LLMSettings, Keychain, KeychainError, background, credential_store_name, configured_local_client
 
 
 class LLMDialog:
@@ -15,13 +15,20 @@ class LLMDialog:
         self.on_close = on_close
         self.keychain = keychain
         self.window = tk.Toplevel(parent)
-        self.window.title('LLM 设置 · DeepSeek · 跨平台版 1.4')
-        self.window.geometry('560x420')
+        self.window.title('LLM 设置 · DeepSeek / LM Studio')
+        self.window.geometry('680x650')
         self.window.protocol('WM_DELETE_WINDOW', self.close)
         self.window.bind('<Escape>', lambda event: self.close())
         self.closed = False
         self.poll_id = None
         self.busy = False
+        self.provider = tk.StringVar(value=settings.provider)
+        self.base_url = tk.StringVar(value=settings.base_url)
+        self.timeout = tk.StringVar(value=str(settings.local_timeout))
+        self.compact = tk.BooleanVar(value=settings.local_speed_mode)
+        self._previous_provider = settings.provider
+        self._models = {'DeepSeek': 'deepseek-flash', 'LM Studio': 'qwen/qwen3.5-9b'}
+        self._models[settings.provider] = settings.model
         self.secret = tk.StringVar()
         self.model = tk.StringVar(value=settings.model)
         self.seat = tk.StringVar(value=f'AI{settings.seat + 1}')
@@ -29,17 +36,30 @@ class LLMDialog:
         body = ttk.Frame(self.window, padding=20)
         body.pack(fill='both', expand=True)
         body.columnconfigure(1, weight=1)
-        for row, label in enumerate(('服务商', 'API Key', '模型', 'LLM 玩家')):
-            ttk.Label(body, text=label).grid(row=row, column=0, sticky='w', padx=(0, 12), pady=10)
-        ttk.Label(body, text='DeepSeek · https://api.deepseek.com').grid(row=0, column=1, sticky='w')
-        ttk.Entry(body, textvariable=self.secret, show='●').grid(row=1, column=1, sticky='ew')
-        ttk.Combobox(body, textvariable=self.model, values=('deepseek-flash', 'deepseek-v4-pro')).grid(row=2, column=1, sticky='ew')
-        ttk.Combobox(body, textvariable=self.seat, values=('AI1', 'AI2', 'AI3', 'AI4'), state='readonly').grid(row=3, column=1, sticky='ew')
-        ttk.Label(body, text='保存连接配置后，在主界面打开“接入 LLM”开关。').grid(row=4, columnspan=2, sticky='w', pady=8)
-        ttk.Label(body, text=f'人机模式下 AI1 始终由你操作；可选 AI2～AI4 使用模型。\n密钥保存在{credential_store_name()}。连接测试和对局调用会产生 API 费用。',
-                  wraplength=510).grid(row=5, columnspan=2, sticky='w', pady=8)
+        labels = ('服务商', 'API Key（仅DeepSeek）', '模型标识', 'LLM 玩家',
+                  '本地API地址', '本地等待秒数')
+        for row, label in enumerate(labels):
+            ttk.Label(body, text=label).grid(row=row, column=0, sticky='w', padx=(0, 12), pady=8)
+        provider = ttk.Combobox(body, textvariable=self.provider,
+                               values=('DeepSeek', 'LM Studio'), state='readonly')
+        provider.grid(row=0, column=1, sticky='ew')
+        provider.bind('<<ComboboxSelected>>', self._provider_changed)
+        self.secret_entry = ttk.Entry(body, textvariable=self.secret, show='●')
+        self.secret_entry.grid(row=1, column=1, sticky='ew')
+        self.model_entry = ttk.Combobox(body, textvariable=self.model)
+        self.model_entry.grid(row=2, column=1, sticky='ew')
+        ttk.Combobox(body, textvariable=self.seat, values=('AI1', 'AI2', 'AI3', 'AI4'),
+                     state='readonly').grid(row=3, column=1, sticky='ew')
+        self.url_entry = ttk.Entry(body, textvariable=self.base_url)
+        self.url_entry.grid(row=4, column=1, sticky='ew')
+        self.timeout_entry = ttk.Entry(body, textvariable=self.timeout)
+        self.timeout_entry.grid(row=5, column=1, sticky='ew')
+        ttk.Label(body, text='保存后打开主界面的“接入 LLM”。人机模式请选择AI2～AI4。',
+                  wraplength=590).grid(row=6, columnspan=2, sticky='w', pady=8)
+        self.provider_hint = ttk.Label(body, wraplength=590)
+        self.provider_hint.grid(row=7, columnspan=2, sticky='w', pady=8)
         buttons = ttk.Frame(body)
-        buttons.grid(row=6, columnspan=2, sticky='w', pady=8)
+        buttons.grid(row=8, columnspan=2, sticky='w', pady=8)
         self.buttons = []
         for label, callback in [('读取已存密钥', self.load_key), ('测试连接', self.test), ('保存设置', self.save)]:
             button = ttk.Button(buttons, text=label, command=callback)
@@ -48,7 +68,43 @@ class LLMDialog:
         self.close_button = ttk.Button(buttons, text='关闭', command=self.close)
         self.close_button.pack(side='left', padx=3)
         self.message = ttk.Label(body, text='粘贴新密钥，或读取已保存的密钥。', wraplength=510)
-        self.message.grid(row=7, columnspan=2, sticky='w', pady=8)
+        self.message.grid(row=9, columnspan=2, sticky='w', pady=8)
+        self.compact_control = ttk.Checkbutton(body, text='本地精简模式（实验）：保留全部动作，仅返回编号，不生成解释', variable=self.compact)
+        self.compact_control.grid(row=10, columnspan=2, sticky='w', pady=6)
+        self._provider_changed()
+
+    def _provider_changed(self, event=None):
+        provider = self.provider.get()
+        if provider != self._previous_provider:
+            self._models[self._previous_provider] = self.model.get()
+            self.model.set(self._models[provider])
+            self._previous_provider = provider
+        local = provider == 'LM Studio'
+        self.compact_control.configure(state='normal' if local else 'disabled')
+        self.secret_entry.configure(state='disabled' if local else 'normal')
+        self.url_entry.configure(state='normal' if local else 'disabled')
+        self.timeout_entry.configure(state='normal' if local else 'disabled')
+        self.model_entry.configure(values=('qwen/qwen3.5-9b',) if local else
+                                   ('deepseek-flash', 'deepseek-v4-pro'))
+        self.provider_hint.configure(text=(
+            'LM Studio须在本机启动服务。本地模式不读DeepSeek密钥、不收云端Token费。'
+            '当前支持未启用认证的本机服务；不支持局域网地址。' if local else
+            f'DeepSeek密钥保存在{credential_store_name()}；测试和对局调用可能计费。'))
+        self.message.configure(text='LM Studio无需填写API Key；先测试连接，再保存。' if local else
+                               '粘贴DeepSeek新密钥，或读取已保存的密钥。')
+
+    def _settings(self):
+        provider = self.provider.get()
+        model = self.model.get().strip()
+        if provider not in ('DeepSeek', 'LM Studio') or not model:
+            raise ValueError('请选择服务商并填写模型标识')
+        settings = LLMSettings(self.enabled.get(), model, int(self.seat.get()[2:]) - 1,
+                               provider, self.base_url.get().strip(),
+                               int(self.timeout.get()) if provider == 'LM Studio' else 180,
+                               self.compact.get() if provider == 'LM Studio' else False)
+        if provider == 'LM Studio':
+            configured_local_client(settings)  # Validate before starting a worker.
+        return settings
 
     def store(self):
         if self.keychain is None:
@@ -86,6 +142,9 @@ class LLMDialog:
         self.poll_id = self.parent.after(80, poll)
 
     def load_key(self):
+        if self.provider.get() == 'LM Studio':
+            self.message.configure(text='本地模式无需读取DeepSeek密钥。')
+            return
         self.message.configure(text=f'正在读取{credential_store_name()}；系统可能请求允许访问。')
         def done(value):
             self.secret.set(value)
@@ -93,37 +152,49 @@ class LLMDialog:
         self._run(lambda: self.store().get(), done)
 
     def test(self):
-        secret, model = self.secret.get().strip(), self.model.get().strip()
-        if not secret or not model:
-            self.message.configure(text='请先填写密钥和模型。')
+        if self.busy or self.closed:
             return
-        self.message.configure(text='正在测试真实连接…')
+        try:
+            settings = self._settings()
+            secret = self.secret.get().strip()
+            if settings.provider == 'DeepSeek':
+                secret = validate_api_key(secret)
+        except (ValueError, LLMRequestError) as exc:
+            self.message.configure(text=str(exc))
+            return
+        self.message.configure(text='正在测试真实连接…本地模型首次响应可能较慢。')
         def work():
-            client = DeepSeekLLMClient(secret, model=model, max_retries=1)
-            data = json.loads(client.chat('连接测试。请只输出 JSON：{"ok":true}'))
-            if not isinstance(data, dict) or data.get('ok') is not True:
-                raise LLMRequestError('服务已响应，但测试回答格式不符合要求')
-        self._run(work, lambda _: self.message.configure(text='连接成功：已收到 DeepSeek 的真实响应。可以保存设置。'))
+            if settings.provider == 'LM Studio':
+                configured_local_client(settings).test_connection()
+            else:
+                client = DeepSeekLLMClient(secret, model=settings.model, max_retries=1)
+                data = json.loads(client.chat('连接测试。请只输出 JSON：{"ok":true}'))
+                if not isinstance(data, dict) or data.get('ok') is not True:
+                    raise LLMRequestError('服务已响应，但测试回答格式不符合要求')
+        self._run(work, lambda _: self.message.configure(
+            text=f'连接成功：{settings.provider} 已返回符合约定的JSON。可以保存设置。'))
 
     def save(self):
         if self.busy or self.closed:
             return
-        secret, model = self.secret.get().strip(), self.model.get().strip()
-        settings = LLMSettings(self.enabled.get(), model, int(self.seat.get()[2:]) - 1)
-        if not model:
-            self.message.configure(text='请填写模型名称。')
+        try:
+            settings = self._settings()
+        except ValueError as exc:
+            self.message.configure(text=str(exc))
             return
+        secret = self.secret.get().strip()
         def work():
-            if secret:
-                self.store().set(validate_api_key(secret))
-            elif settings.enabled:
-                validate_api_key(self.store().get())
+            if settings.provider == 'DeepSeek':
+                if secret:
+                    self.store().set(validate_api_key(secret))
+                elif settings.enabled:
+                    validate_api_key(self.store().get())
             settings.save()
         def done(_):
             self.on_saved(settings)
             self.close()
         self.saving = True
-        self.message.configure(text="正在保存设置…保存成功后自动返回牌桌。")
+        self.message.configure(text='正在保存设置…保存成功后自动返回牌桌。')
         self._run(work, done)
 
     def close(self):

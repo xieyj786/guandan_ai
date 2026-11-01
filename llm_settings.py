@@ -9,6 +9,10 @@ import threading
 from concurrent.futures import Future
 from dataclasses import dataclass, asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agents.lmstudio_client import LMStudioClient
 
 def settings_path():
     if sys.platform == 'win32':
@@ -160,6 +164,10 @@ class LLMSettings:
     enabled: bool = False
     model: str = 'deepseek-flash'
     seat: int = 0
+    provider: str = 'DeepSeek'
+    base_url: str = 'http://127.0.0.1:1234/v1'
+    local_timeout: int = 180
+    local_speed_mode: bool = False
 
     @classmethod
     def load(cls, path: Path = SETTINGS_PATH) -> 'LLMSettings':
@@ -169,14 +177,31 @@ class LLMSettings:
                     or type(data.get('seat')) is not int or not 0 <= data['seat'] < 4
                     or not isinstance(data.get('model'), str) or not data['model'].strip()):
                 return cls()
-            return cls(data['enabled'], data['model'].strip(), data['seat'])
+            provider = data.get('provider', 'DeepSeek')
+            base_url = data.get('base_url', 'http://127.0.0.1:1234/v1')
+            timeout = data.get('local_timeout', 180)
+            speed_mode = data.get('local_speed_mode', False)
+            if type(speed_mode) is not bool:
+                return cls()
+            if provider not in ('DeepSeek', 'LM Studio'):
+                return cls()
+            if not isinstance(base_url, str) or type(timeout) is not int or not 10 <= timeout <= 600:
+                return cls()
+            if provider == 'LM Studio':
+                from agents.lmstudio_client import validate_local_url
+                base_url = validate_local_url(base_url)
+            return cls(data['enabled'], data['model'].strip(), data['seat'], provider, base_url, timeout, speed_mode)
         except (OSError, ValueError):
             return cls()
 
     def save(self, path: Path = SETTINGS_PATH):
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         temporary = path.with_suffix('.tmp')
-        temporary.write_text(json.dumps(asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
+        data = asdict(self)
+        if self.provider == 'DeepSeek':
+            # Preserve the existing on-disk format for the default provider.
+            data = {key: data[key] for key in ('enabled', 'model', 'seat')}
+        temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         temporary.chmod(0o600)
         temporary.replace(path)
 
@@ -198,6 +223,8 @@ class StoredDeepSeekClient:
     def __init__(self, model: str):
         self.model = model
         self.client = None
+        self.last_request_metrics = None
+        self.last_error_kind = ""
 
     def chat(self, prompt: str) -> str:
         from agents.llm_client import DeepSeekLLMClient, LLMRequestError
@@ -209,4 +236,25 @@ class StoredDeepSeekClient:
             if not key:
                 raise LLMRequestError('未保存 API Key，请打开 LLM 设置')
             self.client = DeepSeekLLMClient(key, model=self.model, max_retries=1)
-        return self.client.chat(prompt)
+        self.last_request_metrics = None
+        try:
+            return self.client.chat(prompt)
+        finally:
+            self.last_request_metrics = getattr(self.client, 'last_request_metrics', None)
+            self.last_error_kind = getattr(self.client, 'last_error_kind', '')
+
+
+def configured_local_client(settings: LLMSettings) -> LMStudioClient:
+    """Validate and create the local client with a statically precise type."""
+    if settings.provider != 'LM Studio':
+        raise ValueError('本地客户端需要选择LM Studio')
+    from agents.lmstudio_client import LMStudioClient
+    return LMStudioClient(settings.model, settings.base_url, settings.local_timeout,
+                          speed_mode=settings.local_speed_mode)
+
+
+def configured_client(settings: LLMSettings) -> LMStudioClient | StoredDeepSeekClient:
+    """Local mode never reads or transmits the stored DeepSeek key."""
+    if settings.provider == 'LM Studio':
+        return configured_local_client(settings)
+    return StoredDeepSeekClient(settings.model)

@@ -2,14 +2,18 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import time
+import sys
 import tkinter as tk
 from tkinter import ttk, font as tkfont
 
 from agents.rule_agent import RuleAgent
 from agents.base import Agent
 from agents.deepseek_agent import DeepSeekAgent
-from llm_settings import LLMSettings, StoredDeepSeekClient, background
+from llm_settings import LLMSettings, configured_client, background
 from llm_dialog import LLMDialog
+from llm_activity import LLMActivity, activity_text
+from benchmark_runtime import IdleSleepGuard
 from game_engine.round_result import RoundResult
 from game_engine.card import Card, Rank, Suit, card_display, single_card_power
 from turn_log import format_turn_log
@@ -39,6 +43,12 @@ class GuandanGUI:
         self.pending_job = None
         self.network_future = None
         self.llm_poll_id = None
+        self.llm_activity = LLMActivity()
+        self.llm_window_started = time.time()
+        self.prevent_idle_sleep = tk.BooleanVar(value=sys.platform == 'darwin')
+        self.sleep_guard = IdleSleepGuard()
+        self.llm_stats_poll_id = None
+        self.llm_request_started = None
         self.generation = 0
         self.closed = False
         self.running = False
@@ -57,6 +67,10 @@ class GuandanGUI:
         self.human_index = 0
         self.selected_cards: list[Card] = []
         self._build_ui()
+        self.llm_stats_label = tk.Label(self.root, bg=self.BG, fg=self.GOLD, justify='left', anchor='w', wraplength=1160, font=('Microsoft YaHei UI',10))
+        self.llm_stats_label.pack(fill='x', padx=12, pady=3, before=self.root.winfo_children()[1])
+        self.llm_stats_label.bind("<Configure>", self._resize_play_label)
+        self._refresh_llm_activity()
         self.new_game()
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
@@ -98,6 +112,8 @@ class GuandanGUI:
             self.control_buttons[text] = button
         self.llm_switch = ttk.Checkbutton(controls, text="接入 LLM", variable=self.llm_enabled, command=self._toggle_llm)
         self.llm_switch.pack(side="left", padx=12)
+        if sys.platform == 'darwin':
+            ttk.Checkbutton(controls, text='LLM运行时防止空闲睡眠', variable=self.prevent_idle_sleep).pack(side='left', padx=5)
         self.auto_button = self.control_buttons["看AI对战"]
         self.table = tk.Frame(self.root, bg=self.BG)
         self.table.pack(fill="both", expand=True, padx=12, pady=10)
@@ -212,8 +228,8 @@ class GuandanGUI:
         agents: list[Agent] = [RuleAgent(f"AI{i + 1}") for i in range(4)]
         config = self.active_llm_settings
         if config.enabled and not (self.human_mode and config.seat == self.human_index):
-            agents[config.seat] = DeepSeekAgent(f"AI{config.seat + 1}", StoredDeepSeekClient(config.model))
-            self._log(f"AI{config.seat + 1} 使用 DeepSeek（{config.model}）；其他电脑玩家使用规则 AI")
+            agents[config.seat] = DeepSeekAgent(f"AI{config.seat + 1}", configured_client(config))
+            self._log(f"AI{config.seat + 1} 使用 {config.provider}（{config.model}）；其他电脑玩家使用规则 AI")
         elif config.enabled and self.human_mode:
             self._log("AI1由你控制；本局其他玩家使用规则 AI。可在LLM设置中改选AI2～AI4。")
         level_rank = self.team_levels[self.leading_team]
@@ -511,7 +527,7 @@ class GuandanGUI:
         if self.match:
             self.match.agents = [RuleAgent(f"AI{i+1}") for i in range(4)]
             if config.enabled and not (self.human_mode and config.seat == self.human_index):
-                self.match.agents[config.seat] = DeepSeekAgent(f"AI{config.seat+1}", StoredDeepSeekClient(config.model))
+                self.match.agents[config.seat] = DeepSeekAgent(f"AI{config.seat+1}", configured_client(config))
         message = (f"LLM已开启：AI{config.seat+1}，从下一动作生效" if config.enabled
                    else "LLM已关闭：电脑玩家使用规则 AI")
         if config.enabled and self.human_mode and config.seat == self.human_index:
@@ -562,10 +578,11 @@ class GuandanGUI:
                     self.match.last_play = None
                     self.match.pass_streak = 0
                 observation = self.match._build_observation(index)
-                self.network_future = background(lambda: agent.decide(observation))
+                self.network_future = background(lambda: self._decide_llm(agent, observation))
+                self.llm_request_started = time.monotonic()
                 self.pending_job = (self.network_future, self.match, index,
                                     len(self.match.hands[index]), self.generation, agent)
-                self.status.configure(text=f"AI{index+1} · DeepSeek 正在思考…")
+                self.status.configure(text=f"AI{index+1} · {getattr(agent.client, 'provider_name', 'DeepSeek')} 正在思考…")
                 self.llm_poll_id = self.root.after(80, self._poll_llm)
                 return
             before = len(self.match.hands[index])
@@ -582,6 +599,38 @@ class GuandanGUI:
             self.status.configure(text="对局出现错误，请新建对局")
             self._draw_table()
 
+    def _decide_llm(self, agent, observation):
+        client = agent.client
+        client.last_request_metrics = None
+        kind = 'fallback'
+        try:
+            action = agent.decide(observation)
+            kind = agent.last_decision_kind
+            return action
+        finally:
+            self.llm_activity.record(kind, getattr(client, 'last_request_metrics', None))
+
+    def _refresh_llm_activity(self):
+        self.llm_stats_poll_id = None
+        if self.closed:
+            return
+        elapsed = max(0, int(time.time() - self.llm_window_started))
+        hours, remainder = divmod(elapsed, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        self.llm_stats_label.configure(text=f'窗口时长{hours:02d}:{minutes:02d}:{seconds:02d} · ' + activity_text(self.llm_activity.summary()))
+        pending = self.network_future is not None and not self.network_future.done()
+        watching = self.running and self.match is not None and any(isinstance(a, DeepSeekAgent) for a in self.match.agents)
+        if self.prevent_idle_sleep.get() and (pending or watching):
+            if self.sleep_guard.process is None:
+                try:
+                    self.sleep_guard.start()
+                except OSError:
+                    self.prevent_idle_sleep.set(False)
+                    self._log('无法启用防空闲睡眠；对局继续运行。')
+        else:
+            self.sleep_guard.stop()
+        self.llm_stats_poll_id = self.root.after(200, self._refresh_llm_activity)
+
     def _poll_llm(self):
         self.llm_poll_id = None
         job = self.pending_job
@@ -589,6 +638,8 @@ class GuandanGUI:
             return
         future, match, index, before, generation, agent = job
         if not future.done():
+            elapsed = time.monotonic() - self.llm_request_started if self.llm_request_started is not None else 0
+            self.status.configure(text=f"AI{index+1} · {getattr(agent.client, 'provider_name', 'DeepSeek')} 正在决策，已等待{elapsed:.1f}秒")
             self.llm_poll_id = self.root.after(80, self._poll_llm)
             return
         self.pending_job = None
@@ -648,6 +699,10 @@ class GuandanGUI:
 
     def close(self):
         self.closed = True
+        if self.llm_stats_poll_id is not None:
+            self.root.after_cancel(self.llm_stats_poll_id)
+            self.llm_stats_poll_id = None
+        self.sleep_guard.stop()
         self._stop_action_flash()
         if self.llm_dialog is not None and not self.llm_dialog.closed:
             self.llm_dialog.close()

@@ -272,8 +272,10 @@ LLM GUI tests use fake network/credentials and make no paid requests; Windows AP
 The user has confirmed Windows operation and a real DeepSeek connection. This documentation-cleanup
 regression runs on macOS, not a new Windows validation. The configurable benchmark and log export are now available through benchmark_gui.py; separate compatible LLM endpoints can be selected for each team.
 
+主游戏窗口的“LLM设置”支持可选“本地精简模式（实验）”，默认关闭；开启后仅返回合法动作编号。窗口显示本窗口累计Token、调用耗时、自动动作和回退，过期请求仍计用量，连接测试不计入。Mac运行期间可防止空闲睡眠。详见[本地接入说明](docs/LMStudio_使用说明.txt)。
+
 ## 独立牌局统计测试 / Independent-round benchmarks
 
-运行 `python benchmark_gui.py`，选择250、500、1000局或自定义局数。支持规则队、LLM队及不同兼容LLM之间对战；详见[测试程序设计](docs/benchmark_design.md)。先用少量局数核实参数和连接，再进行可能计费的LLM批量测试。
+运行 `python benchmark_gui.py`，选择50、100或500轮（可输入1～500轮）。每轮13副不同发牌分别用于级牌2至A，再同牌换位重打，共26局；不升级、不进贡。汇总换位前后、各级牌胜率与完整配对结果。支持规则队、LLM队及不同兼容LLM之间对战；详见[测试程序设计](docs/benchmark_design.md)。先用少量局数核实参数和连接，再进行可能计费的LLM批量测试。
 
 Run `python benchmark_gui.py` for configurable independent rounds, natural-pattern statistics and per-run logs. Each team may use rules or a compatible LLM. Start with a small trial; LLM calls may incur charges. See the [design (Chinese)](docs/benchmark_design.md).

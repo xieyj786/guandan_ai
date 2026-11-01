@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
+from .llm_actions import legal_actions
 from typing import Optional
 
 from game_engine.card import Card, card_display, single_card_power
@@ -69,28 +71,37 @@ class LLMAgent(Agent):
         super().__init__(name)
         self.client = client
         self.personality = personality
+        self.report = ""
+        self.last_decision_kind = ""
+        self.fallback_reason = ""
         self.fallback = fallback or RuleAgent(name=f"{name}(fallback)")
 
     def decide(self, observation: Observation) -> Action:
-        prompt = self._build_prompt(observation)
+        actions = legal_actions(observation)
+        self.fallback_reason = ''
+        if len(actions) == 1:
+            self.last_decision_kind = 'automatic'
+            self.report = f'{self.name}〔唯一合法动作自动执行〕：无需调用模型'
+            return actions[0]
+        self.last_decision_kind = 'llm'
         try:
-            raw_response = self.client.chat(prompt)
+            raw_response = self.client.chat(self._build_prompt(observation))
+            parsed = self._parse_response(raw_response)
+            if parsed is not None:
+                action_type, card_texts = parsed
+                cards = [] if action_type == 'pass' else self._resolve_cards(card_texts, observation.hand)
+                if cards is not None:
+                    chosen = next((a for a in actions if a.action_type == action_type
+                                   and Counter(a.cards) == Counter(cards)), None)
+                    if chosen is not None:
+                        self.report = f'{self.name}〔LLM〕：已选择合法动作'
+                        return chosen
+            self.fallback_reason = 'invalid_action_json'
         except LLMRequestError:
-            return self.fallback.decide(observation)
-
-        parsed = self._parse_response(raw_response)
-        if parsed is None:
-            return self.fallback.decide(observation)
-
-        action_type, card_texts = parsed
-        if action_type == "pass":
-            return Action(action_type="pass")
-
-        resolved = self._resolve_cards(card_texts, observation.hand)
-        if resolved is None:
-            return self.fallback.decide(observation)
-
-        return Action(action_type="play", cards=resolved)
+            self.fallback_reason = getattr(self.client, 'last_error_kind', '') or 'api_error'
+        self.last_decision_kind = 'fallback'
+        self.report = f'{self.name}〔规则接管〕：{self.fallback_reason}'
+        return self.fallback.decide(observation)
 
     def _build_prompt(self, observation: Observation) -> str:
         hand_str = ", ".join(
@@ -115,6 +126,8 @@ class LLMAgent(Agent):
 
     @staticmethod
     def _parse_response(response: str) -> Optional[tuple[str, list[str]]]:
+        if not isinstance(response, str):
+            return None
         try:
             data = json.loads(response)
         except json.JSONDecodeError:
@@ -126,10 +139,14 @@ class LLMAgent(Agent):
             except json.JSONDecodeError:
                 return None
 
+        if not isinstance(data, dict):
+            return None
         action_type = data.get("action")
         if action_type not in ("play", "pass"):
             return None
         cards = data.get("cards", []) if action_type == "play" else []
+        if not isinstance(cards, list) or not all(isinstance(c, str) for c in cards):
+            return None
         if action_type == "play" and not cards:
             return None
         return action_type, cards

@@ -1,5 +1,12 @@
 # 清理记录 / Cleanup record — 2026-10-04
 
+## 2026-10-28 Windows 本机构建整理
+
+检查确认源码内容与 `b4b79d6` 一致，现有 Git 差异仅为 Windows 文件模式变化。保留源码、测试、牌面资源、虚拟环境和历史构建记录，清理项目 Python 字节码缓存。
+根目录保留 `gui.exe` 与 `SHA256SUMS.txt`，更新 `dist/SHA256SUMS.txt`，并将根目录生成文件加入 Git 忽略规则。
+本机构建使用 Windows x64、Python 3.13.12、PyInstaller 6.19.0；84 项核心测试、五组桌面回归和 exe 窗口启动检查均通过。
+exe SHA-256：`151ba1cd7f7432967ad52d3a9a597de7d60e963fd915c00fe7176bcb03c9a7d7`。
+
 删除根目录三份未被当前项目引用的旧规则原型；唯一实现保留在 `game_engine/`。
 旧 `deck.py` 缺少点数2，不能继续作为实现参考。删除只含文件名的 Finder 文本剪辑。
 Removed unreferenced root prototypes; `game_engine/` remains authoritative. The old deck omitted twos.
@@ -93,3 +100,40 @@ Removed only regenerable Python/Finder caches. Preserved source, tests, artwork,
 | `game_engine/__pycache__/card.cpython-313.pyc` | 5391 | `6b24be17a03e137a46d593a6e89181981613f296fa2ef75f7a687a399719c4cc` |
 
 本次共删除23个缓存文件，201,182字节；macOS与Windows均通过84项核心和五组桌面回归。Windows exe 及校验文件已发布至 Release，本地副本在 `dist/`。
+
+
+## 2026-10-30 本地修改检查与缓存清理
+
+保留 LM Studio 客户端、设置窗口、GUI 接入、六项新增测试和使用说明；统一 `.gitignore` 换行，更新使用说明为当前项目运行指引。保留虚拟环境、资源、全部有效测试及 Windows 构建文件。既有 Windows 验证记录为历史记录，本次不重新确认其结论。
+
+删除 25 个可再生缓存文件，共 220,268 字节：
+
+| 文件 | 字节 | SHA-256 |
+|---|---:|---|
+| `.DS_Store` | 10244 | `6e4d13532d5fe8f410a05242ac85f8d71fc1ef3de7c75e88781b9a960c617c06` |
+| `agents/__pycache__/strategy_planner.cpython-313.pyc` | 4533 | `0015dcd45fc4b596f85b5b9497a221e7b1810b19e8c082e13b308edc3d8c6959` |
+| `agents/__pycache__/base.cpython-313.pyc` | 3093 | `ab2b8ee7fe17dc8b25dc5bfae99f13e0b302eb2e58e3ac9040306390f9576841` |
+| `agents/__pycache__/lmstudio_client.cpython-313.pyc` | 5560 | `6268c54eab217bdc6a192f1431140aee1af6d2865387fc71e5aaf76c7f62f6e6` |
+| `agents/__pycache__/llm_client.cpython-313.pyc` | 11771 | `95a3bc92cede3b17a3038269004e70cd8cf15b61a229f64a50a99f92078a79bf` |
+| `agents/__pycache__/rule_agent.cpython-313.pyc` | 18487 | `f08db4921c9d13119ca5aeab1cb5c233f369d2a2fb9061df1236b30e16ec10c3` |
+| `agents/__pycache__/__init__.cpython-313.pyc` | 204 | `5327e60b48dadf5397d8ab691558ea1fa3a8ae8e82bdde2c9a7a35bf1f34fedc` |
+| `agents/__pycache__/deepseek_agent.cpython-313.pyc` | 7596 | `27f6912f8e3a96a40854e01b87c5f8c51b665553b1606b748525759c0a19a4c6` |
+| `__pycache__/match_runner.cpython-313.pyc` | 23475 | `7d6ca41a04fef8567604a7bf5aa251e75fbd34ca6e1e20597e64dd6b1de2192d` |
+| `__pycache__/card_ui.cpython-313.pyc` | 13343 | `729d7335f11832b6ccf9b9202b5be5e89f714c9c597eb05c4a8eba5aff61dad8` |
+| `__pycache__/llm_dialog.cpython-313.pyc` | 17025 | `dbc5b0040d759f77d7798c8be12057bb511baffe06cdbd7e8b6804dfc1ac9af3` |
+| `__pycache__/play_display.cpython-313.pyc` | 4372 | `3eb01f2369a1de908dc70977a1db630a1555d6042156214a16a66f2937fc9792` |
+| `__pycache__/game_series.cpython-313.pyc` | 6211 | `667740cb09bbf63ee4b3ce55df71b25b23873cc881f54199436d37da2a43f6d0` |
+| `__pycache__/turn_log.cpython-313.pyc` | 2301 | `8e3c42e6f9b1b72ce80ee71b36c0e5937f0cecc7cbbe46dad4d7dc3f3e4a56fd` |
+| `__pycache__/llm_settings.cpython-313.pyc` | 19045 | `6e46e4a46a7dd62d1d7dcedc4fc94e90b1e8848dc14bedde3cfd50be4f030b73` |
+| `docs/.DS_Store` | 6148 | `d65165279105ca6773180500688df4bdc69a2c7b771752f0a46ef120b7fd8ec3` |
+| `game_engine/__pycache__/deck.cpython-313.pyc` | 4944 | `25dd59186dd81ce51b9414c306e13b31454f3e57fc28a6b2f947c7b761daf456` |
+| `game_engine/__pycache__/identify.cpython-313.pyc` | 14587 | `7b4375d0e90527f9c7f0bc2a80b63a474fc9c0be7f75606db03d142f5b4f52d5` |
+| `game_engine/__pycache__/moves.cpython-313.pyc` | 17117 | `eab59c4d53fc19cc79f62abfa6b761b9a420000ec5942e916b9dd6c7fa51b61f` |
+| `game_engine/__pycache__/round_result.cpython-313.pyc` | 2944 | `7ab11a228db45ee30f871d752920f48be5caf799f3123bb32dc94fcf8bc513d2` |
+| `game_engine/__pycache__/comparator.cpython-313.pyc` | 3200 | `c79c9dcd6f20e1f6e9aabbe3225395de2273a75655c73a65de0305bb726f352c` |
+| `game_engine/__pycache__/card_type.cpython-313.pyc` | 3654 | `a36ccba6614659821440d49c47c3cc73aef20b73f87627a89aa98b14a7bfe5e4` |
+| `game_engine/__pycache__/tribute.cpython-313.pyc` | 14596 | `eeb69aa914cd53d938e29a1f330dcf41258aa212fa009e63d1b920e69a3d4fcf` |
+| `game_engine/__pycache__/__init__.cpython-313.pyc` | 459 | `d25222277814962ded3a591187ac8410de8164eff25e70d4e05d37514683eae6` |
+| `game_engine/__pycache__/card.cpython-313.pyc` | 5359 | `d0bee515e3477e8fce305b59a3254499160643a0083f2d01fea1c2dde8a7410b` |
+
+本次验证：macOS 项目 `.venv/bin/python` 执行 `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tests/run_all.py`，90 项测试全部通过。LM Studio 测试使用模拟请求，未进行真实模型推理、Tk 窗口视觉验收或 Windows exe 验证。修改保留在工作区，未提交或推送。
