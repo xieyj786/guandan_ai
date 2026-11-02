@@ -5,7 +5,7 @@
 ## 中文
 
 四人两队掼蛋桌面程序，支持 macOS / Windows、规则 AI、人机对战与可选 DeepSeek。
-最近整理日期：2026-10-28。界面语言为中文；本说明及牌面规范均提供中英文。
+最近整理日期：2026-11-02。界面语言为中文；本说明及牌面规范均提供中英文。
 
 ### 启动
 
@@ -33,17 +33,31 @@ py -3 -m venv .venv
 
 也可在合适的虚拟环境内直接使用 `python gui.py`。代码可同步，虚拟环境和密钥不跨系统复制。
 
-### Windows 可执行文件 / Windows executable
+### 离线玩牌：play.py
 
-从 [GitHub Releases](https://github.com/xieyj786/guandan_ai/releases/latest) 下载 `gui.exe`，无需安装 Python。
-这是 Windows x64 程序，不能在 macOS 运行。发布附件 `SHA256SUMS.txt` 提供校验值。
+`play.py` 基于 `gui.py` 的牌桌功能，保留人机对战、规则 AI 观察、进还贡和跨局升级，
+不包含 LLM 设置、模型请求或系统密钥访问。牌面继续复用 `card_ui.py` 和 `play_display.py`。
 
-Windows 本机构建：`py -m pip install pyinstaller==6.16.0`，再运行 `py -m PyInstaller --clean --noconfirm gui.spec`，产物为 `dist/gui.exe`。
-GitHub Actions 在 Windows 上运行核心与桌面回归、打包并检查 exe 窗口；推送 `v*` 标签自动发布。
-2026-10-28 发布 `v0.1.0-20261028.2` 已通过 Windows 84项核心、五组桌面回归和打包窗口启动检查，详见[发布验证](docs/maintenance.md#2026-10-28-发布验证--release-verification)。
+```bash
+python play.py
+```
 
-Download `gui.exe` from Releases for Windows x64; Python is not required. The release includes a SHA-256 checksum.
-Build on Windows using the commands above. Tagged releases run tests, package and verify the executable on Windows.
+对局控制集中在不依赖 Tk 的 `play_game.py`，通过手牌编号提交动作，并提供可转为 JSON 的状态。
+这是为下一步 iPhone / iPad 界面准备的逻辑接口；当前 `play.py` 仍是桌面 Tk 程序，
+尚未生成 iOS 应用。依赖边界、接口和后续工作见 [离线版与移动端准备](docs/play_mobile.md)。
+
+### Windows 可执行文件：停止更新 / Windows executable: discontinued
+
+自2026-11-02起，`gui.exe` 不再更新或发布。后续功能与结构调整以本仓库源码为准，
+请使用上述 Python 启动方式；历史 exe 不包含这些新改动。
+
+[已有 GitHub Releases](https://github.com/xieyj786/guandan_ai/releases) 保留供历史查阅，
+不删除旧版本或附件。原打包发布工作流已停用，新的 `source-tests.yml` 仅运行源码和桌面测试，
+不构建、上传或发布 exe。`gui.spec` 仅作为历史构建配方保留。
+
+As of 2026-11-02, `gui.exe` is no longer updated or released. Run the Python sources for current
+features. Existing Releases remain available as historical artifacts. CI now runs source and desktop
+tests only; it does not build executables or create Releases. The old `gui.spec` remains for reference.
 
 ### GUI 与操作
 
@@ -96,7 +110,7 @@ Build on Windows using the commands above. Tagged releases run tests, package an
 4. 在主界面打开“接入 LLM”。每次启动默认关闭；开关从下一动作生效，保留当前牌局。
    关闭恢复规则AI，旧的在途回答不执行；已发送的请求仍可能收费。
 5. 人机模式AI1始终由人操作；可选AI2/AI4为对手，AI3为队友。当前仅支持一个LLM座位，
-   两队多模型配置尚未实现。viewer保持全规则AI。
+   两队多模型配置尚未实现。viewer也支持相同的LLM设置和开关；离线入口play.py不接入LLM。
 
 模型只接收自身手牌、公开信息及合法动作编号，返回编号和简短理由。
 请求后台执行，25秒网络超时、单次尝试、非思考模式、最多256输出token。
@@ -114,16 +128,19 @@ macOS补充加载 `/etc/ssl/cert.pem`，不关闭TLS或主机名验证。
 
 ### 目录与文档
 
+项目按界面、规则、策略分开维护；依赖边界和修改方法见[代码架构](docs/architecture.md)，
+真实经验与LLM数据的复核流程见[策略持续改进](docs/strategy_improvement.md)。
+
 | 文件/目录 | 职责 |
 |---|---|
-| `game_engine/` | 唯一规则实现：牌、发牌、识别、比较、结算、进贡、候选 |
-| `agents/` | 观测动作接口、规则AI、DeepSeek及兼容LLM客户端 |
-| `match_runner.py`, `game_series.py` | 单局调度、多局升级 |
-| `gui.py`, `viewer.py` | 人机牌桌、全手牌观察器 |
-| `benchmark.py`, `benchmark_gui.py` | 独立牌局统计、两队配置、日志导出 |
-| `gui.spec` | PyInstaller打包配置，需在目标系统安装打包工具 |
-| `card_ui.py`, `play_display.py`, `turn_log.py` | 共享牌面、PASS、动作日志 |
-| `llm_dialog.py`, `llm_settings.py` | 设置界面、系统凭据、后台调用 |
+| `presentation/` | 界面、牌面、交互、LLM设置窗口；正式显示实现 |
+| `game_engine/` | 稳定规则：牌型、张数、大小、红心配、发牌、进贡、终局 |
+| `strategy/` | 持续改进的规则AI、分组与出牌路线策略 |
+| `gameplay/` | 公共观测/动作契约、单局及多局协调、离线控制 |
+| `integrations/llm/` | 保留的DeepSeek、LM Studio和兼容LLM适配、凭据及用量 |
+| `evaluation/` | 独立牌局统计、报告、经验样本与复核案例评估 |
+| 根目录入口、`agents/` | 兼容原有启动和导入；新实现不在此重复维护 |
+| `gui.spec` | 历史打包配方；不再自动构建或发布gui.exe |
 | `tests/` | 无外部依赖规则测试和桌面回归 |
 | `assets/card_style/` | 保留原始参考图、预览与[双语规范](assets/card_style/README.md) |
 | [CHANGELOG](CHANGELOG.md) | 本阶段变更与清理记录 |
@@ -134,6 +151,10 @@ macOS补充加载 `/etc/ssl/cert.pem`，不关闭TLS或主机名验证。
 | `docs/archive/` | 历史设计资料，不作为当前功能说明 |
 
 ### 验证与阶段状态
+
+2026-11-02结构调整后，本机macOS的130项自动测试及八组桌面回归通过；
+规则/策略固定牌局状态与重构前一致。LLM回归使用模拟请求，不代表本次新做了真实模型、
+Windows打包或iOS验证。以下2026-10-28记录保留为历史验证。
 
 2026-10-28本机 macOS（项目 `.venv`，Python 3.13.3）84项核心测试通过。
 本次五组桌面回归全部通过，包括250步观察器一致性、7小局完整人机比赛、模拟LLM、出牌状态与统计窗口。
@@ -153,7 +174,7 @@ LLM桌面测试使用模拟网络和凭据，不产生付费调用；Win32读写
 ## English
 
 A four-player, two-team Guandan desktop game for macOS and Windows, with rule-based AI,
-human play and optional DeepSeek decisions. Last reviewed on 2026-10-28.
+human play and optional DeepSeek / LM Studio decisions. Last reviewed on 2026-11-02.
 The application UI is Chinese; this README and the card-style README are bilingual.
 
 ### Running
@@ -238,7 +259,7 @@ Successful saving closes the window; errors remain visible. Close/Esc also dismi
 Enable **接入 LLM** on the main table when needed. Every launch defaults to OFF. Switching affects
 the next action without redealing; OFF restores rule AI and ignores old pending responses. Requests
 already sent may still incur charges. Human AI1 always remains human: select AI2/AI4 as an opponent
-or AI3 as a partner. Only one LLM seat is currently supported; viewer remains rule-only.
+or AI3 as a partner. Only one LLM seat is supported per table. Viewer also supports this optional connection; play.py stays offline.
 Connection testing is available independently of this switch.
 
 The model receives its own hand, public state and legal action IDs, then returns an ID and short reason.
@@ -254,11 +275,12 @@ HTTP failures; check the full key for 401 and balance for 402.
 
 ### Layout, documentation and verification
 
-`game_engine/` is the sole rules implementation; `agents/` contains observations, actions and AI.
-`match_runner.py` handles a round and `game_series.py` handles advancement. `gui.py`/`viewer.py` are
-entrypoints; `card_ui.py`, `play_display.py` and `turn_log.py` provide presentation.
-`llm_dialog.py`/`llm_settings.py` manage connections and credentials. `tests/` contains core and desktop
-regressions; `assets/card_style/` preserves the reference image and bilingual style guide.
+`presentation/` owns display and interaction, `game_engine/` owns rule legality, and `strategy/`
+owns play selection. `gameplay/` provides shared contracts and match coordination;
+`integrations/llm/` preserves optional model adapters, and `evaluation/` supports benchmarks and
+reviewed decision cases. Root scripts and `agents/` remain compatible entrypoints/imports.
+See [architecture](docs/architecture.md) and [strategy improvement](docs/strategy_improvement.md)
+for ownership, dependency checks and the experience review workflow.
 
 See [CHANGELOG](CHANGELOG.md), [maintenance notes](docs/maintenance.md),
 [current roadmap](docs/development_plan.md) and [card style](assets/card_style/README.md).
@@ -272,8 +294,10 @@ LLM GUI tests use fake network/credentials and make no paid requests; Windows AP
 The user has confirmed Windows operation and a real DeepSeek connection. This documentation-cleanup
 regression runs on macOS, not a new Windows validation. The configurable benchmark and log export are now available through benchmark_gui.py; separate compatible LLM endpoints can be selected for each team.
 
+主游戏窗口的“LLM设置”支持可选“本地精简模式（实验）”，默认关闭；开启后仅返回合法动作编号。窗口显示本窗口累计Token、调用耗时、自动动作和回退，过期请求仍计用量，连接测试不计入。Mac运行期间可防止空闲睡眠。详见[本地接入说明](docs/LMStudio_使用说明.txt)。
+
 ## 独立牌局统计测试 / Independent-round benchmarks
 
-运行 `python benchmark_gui.py`，选择250、500、1000局或自定义局数。支持规则队、LLM队及不同兼容LLM之间对战；详见[测试程序设计](docs/benchmark_design.md)。先用少量局数核实参数和连接，再进行可能计费的LLM批量测试。
+运行 `python benchmark_gui.py`，选择50、100或500轮（可输入1～500轮）。每轮13副不同发牌分别用于级牌2至A，再同牌换位重打，共26局；不升级、不进贡。汇总换位前后、各级牌胜率与完整配对结果。支持规则队、LLM队及不同兼容LLM之间对战；详见[测试程序设计](docs/benchmark_design.md)。先用少量局数核实参数和连接，再进行可能计费的LLM批量测试。
 
 Run `python benchmark_gui.py` for configurable independent rounds, natural-pattern statistics and per-run logs. Each team may use rules or a compatible LLM. Start with a small trial; LLM calls may incur charges. See the [design (Chinese)](docs/benchmark_design.md).

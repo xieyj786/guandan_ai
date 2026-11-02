@@ -1,0 +1,102 @@
+"""LLM 只能选择规则引擎生成的合法动作编号。"""
+from __future__ import annotations
+
+import json
+from typing import Protocol
+from collections import Counter
+from gameplay.contracts import Action, Agent, Observation
+from integrations.llm.local_prompt import fast_prompt
+from integrations.llm.client import LLMRequestError
+from strategy.rule_agent import RuleAgent
+from game_engine.card import card_display
+from integrations.llm.actions import legal_actions
+
+
+class ChatClient(Protocol):
+    def chat(self, prompt: str) -> str: ...
+
+
+class DeepSeekAgent(Agent):
+    def __init__(self, name: str, client: ChatClient):
+        super().__init__(name)
+        self.client = client
+        self.fallback = RuleAgent(name)
+        self.report = ""
+        self.last_decision_kind = ""
+
+    def candidates(self, obs: Observation) -> list[Action]:
+        return legal_actions(obs)
+
+    def decide(self, observation: Observation) -> Action:
+        self.fallback_reason = ""
+        self.last_decision_kind = ""
+        actions = self.candidates(observation)
+        if len(actions) == 1:
+            self.last_decision_kind = 'automatic'
+            self.report = f'{self.name}〔唯一合法动作自动执行〕：无需调用模型'
+            return actions[0]
+        self.last_decision_kind = 'llm'
+        recommended = self.fallback.decide(observation)
+        suggestion = next((i for i, a in enumerate(actions) if a.action_type == recommended.action_type
+                           and Counter(a.cards) == Counter(recommended.cards)), None)
+        public = Counter(card_display(c) for c in observation.played_cards)
+        state = {
+            '玩家': self.name, '本局全桌级牌': observation.level_rank.name,
+            '手牌': [card_display(c) for c in observation.hand],
+            '队友剩余': observation.teammate_hand_size,
+            '下家和上家对手剩余': observation.opponent_hand_sizes,
+            '当前控牌者': '无人，必须领出' if observation.last_play is None else
+                          '队友' if observation.last_play_by_teammate else '对手或自己',
+            '当前牌': [card_display(c) for c in observation.last_play.cards] if observation.last_play else [],
+            '公开已出牌及张数': dict(public),
+            '近期记录': observation.play_history[-16:],
+            '规则推荐编号': suggestion,
+            '合法动作': [{'id': i, 'action': a.action_type,
+                        'cards': [card_display(c) for c in a.cards]} for i, a in enumerate(actions)],
+        }
+        fast = getattr(self.client, 'speed_mode', False)
+        local_request = fast_prompt(state, observation.level_rank, observation.use_wildcards) if fast else None
+        compact = getattr(self.client, 'provider_name', '') == 'LM Studio'
+        if compact:
+            # Preserve every card, count, action ID and all 16 history entries.
+            # Only the serialization changes; no candidate pruning or hidden data.
+            state['手牌'] = ' '.join(state['手牌'])
+            state['当前牌'] = ' '.join(state['当前牌'])
+            state['合法动作'] = {str(action['id']): ' '.join(action['cards'])
+                                 for action in state['合法动作']}
+        prompt = ('你是掼蛋玩家。只根据自己的手牌和公开信息决策，不猜看不到的手牌。'
+                  '红心级牌为逢人配，两副牌。合法动作已由引擎验证，不自行添加动作。'
+                  '优先一手走完；队友控牌默认让牌，但可直接走完或封堵报单的下家。'
+                  '队友报单时，自己牌弱且超过三手才走完则送现成小散单；有控制牌时按自身计划。'
+                  '对手报单避免喂小单。规则推荐供参考。'
+                  '只输出 JSON：{"action_id": 整数编号, "reason": "一句简短策略说明"}。'
+                  + ('牌张以空格分隔；合法动作的键是编号，值是牌张，空串表示过牌。' if compact else '')
+                  + '\n' + json.dumps(state, ensure_ascii=False,
+                                        separators=(',', ':') if compact else None))
+        if local_request is not None:
+            prompt = local_request
+        try:
+            data = json.loads(self.client.chat(prompt))
+            if not isinstance(data, dict) or type(data.get('action_id')) is not int:
+                raise ValueError('无效编号')
+            index = data['action_id']
+            if not 0 <= index < len(actions):
+                raise ValueError('编号超出范围')
+            reason = data.get('reason', '')
+            # 绝不将凭据或完整响应写入日志。
+            if not isinstance(reason, str):
+                reason = ''
+            import re
+            reason = re.sub(r'sk-[\w-]+', '[密钥已隐藏]', reason)
+            reason = ' '.join(reason.split())[:120]
+            self.report = f'{self.name}〔{getattr(self.client, "provider_name", "DeepSeek")}〕：{reason or f"已选择合法动作{index}"}'
+            return actions[index]
+        except LLMRequestError as exc:
+            self.fallback_reason = getattr(self.client, "last_error_kind", "") or "api_error"
+            # 客户端错误均为经过脱敏的固定说明。
+            self.report = f'{self.name}〔规则接管〕：{exc}'
+        except (ValueError, TypeError, KeyError):
+            self.fallback_reason = 'invalid_action_json'
+            self.report = f'{self.name}〔规则接管〕：模型回答不是有效动作编号'
+        self.last_decision_kind = 'fallback'
+        return recommended

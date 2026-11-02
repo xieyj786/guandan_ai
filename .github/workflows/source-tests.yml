@@ -1,0 +1,32 @@
+name: Source tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-source-tests:
+    runs-on: windows-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          architecture: x64
+      - name: Core and architecture regressions
+        run: python tests/run_all.py
+      - name: Desktop regressions
+        shell: pwsh
+        run: |
+          foreach ($test in @('gui_smoke', 'gui_modes_smoke', 'gui_llm_smoke', 'gui_llm_features_smoke', 'gui_play_status_smoke', 'benchmark_gui_smoke', 'play_smoke', 'viewer_llm_smoke')) {
+            python "tests/$test.py"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

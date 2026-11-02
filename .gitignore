@@ -10,3 +10,7 @@ dist/
 *.textClipping
 .env
 .env.*
+
+/gui.exe
+
+/SHA256SUMS.txt

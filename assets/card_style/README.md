@@ -5,7 +5,7 @@
 ## 中文
 
 用户指定 guandan_ai 与 guandan_claude 共用参考设计。`reference.png` 为完整保留的用户原图，
-`preview.svg` 为设计预览。实际牌面由根目录 `card_ui.py` 绘制，不截取或拉伸参考图。
+`preview.svg` 为设计预览。实际牌面由 `presentation/cards.py` 绘制（根目录 `card_ui.py` 保留兼容接口），不截取或拉伸参考图。
 
 - 纵向牌，宽高约1:2；白底、细黑圆角边框。
 - 上方居中大花色，下方居中粗衬线点数；A/K/Q/J不用人物插画，不用四角小标。
@@ -36,8 +36,8 @@ strip.set_cards([('spade', 14), ('heart', 13), ('club', 12), ('diamond', 11)])
 ## English
 
 The user selected a shared design for guandan_ai and guandan_claude. `reference.png` preserves the
-original artwork; `preview.svg` is a design preview. Runtime cards are drawn by root-level
-`card_ui.py`, rather than cropped or stretched from the reference.
+original artwork; `preview.svg` is a design preview. Runtime cards are drawn by `presentation/cards.py` (with the compatible
+`card_ui.py` import), rather than cropped or stretched from the reference.
 
 - Portrait cards, approximately 1:2 width/height, white fill and thin rounded black borders.
 - Large centered suit above a bold serif rank; no court-card portraits or corner indices.
