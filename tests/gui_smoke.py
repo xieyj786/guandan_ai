@@ -40,14 +40,49 @@ for geometry in ('1000x680', '1200x780'):
         assert int(slot.grid_info()['row']) == row and int(slot.grid_info()['column']) == col
         assert '\n' not in label.cget('text')
         assert label.cget('anchor') == ('e' if index == 1 else 'w')
-    assert gui.play_labels[1].cget('text') == '等待出牌  AI2'
+    assert all(label.cget('text') == '' for label in gui.play_labels.values())
+    assert gui.play_prompt.cget('text') == ''
     tiles = gui.hand_row.winfo_children()
-    assert len(tiles) == 27 and len({tile.winfo_y() for tile in tiles}) == 1
+    assert len(tiles) == 27
+    columns = {}
+    for tile in tiles:
+        columns.setdefault(tile.rank, []).append(tile)
+        assert tile.winfo_y() + tile.winfo_height() <= gui.hand_row.winfo_height()
+    assert len({group[0].winfo_x() for group in columns.values()}) == len(columns)
+    for group in columns.values():
+        assert len({tile.winfo_x() for tile in group}) == 1
+        assert len({tile.winfo_y() for tile in group}) == len(group)
     assert all(tile.winfo_x() + tile.winfo_width() <= gui.hand_row.winfo_width() for tile in tiles)
-    assert abs(gui.play_area.winfo_height() / gui.center.winfo_height() - 0.6) < 0.01
-    assert gui.seats[0].winfo_y() > gui.center.winfo_y()
-    assert gui.seats[2].winfo_y() < gui.center.winfo_y()
-    assert gui.seats[3].winfo_x() < gui.center.winfo_x() < gui.seats[1].winfo_x()
+    assert gui.action_row.winfo_x() >= gui.hand_row.winfo_x() + gui.hand_row.winfo_width()
+    buttons = list(gui.action_buttons.values())
+    button_y = [button.winfo_rooty() for button in buttons]
+    assert button_y == sorted(set(button_y))
+    for button in buttons:
+        assert button.winfo_ismapped()
+        assert button.winfo_rooty() + button.winfo_height() <= gui.action_row.winfo_rooty() + gui.action_row.winfo_height()
+    assert gui.hand_hint.winfo_rooty() > buttons[-1].winfo_rooty() + buttons[-1].winfo_height()
+    assert gui.hand_hint.winfo_rooty() + gui.hand_hint.winfo_height() <= gui.action_row.winfo_rooty() + gui.action_row.winfo_height()
+    record = gui.log.master
+    width = root.winfo_width()
+    new_button = gui.control_buttons['新局']
+    top = new_button.winfo_rooty() + new_button.winfo_height()
+    available = root.winfo_rooty() + root.winfo_height() - top
+    assert abs(gui.center.winfo_width() - width * .65) <= 1
+    assert abs(record.winfo_width() - width * .30) <= 1
+    assert abs(gui.hand_panel.winfo_width() - width * .78) <= 1
+    assert abs(gui.center.winfo_height() - available * .60) <= 1
+    assert abs(gui.hand_panel.winfo_height() - available * .35) <= 1
+    assert gui.hand_panel.winfo_rootx() == gui.center.winfo_rootx()
+    assert gui.center.winfo_height() == record.winfo_height()
+    assert int(gui.action_row.cget('highlightthickness')) == 0
+    for button in buttons:
+        assert button.winfo_width() < gui.action_row.winfo_width() * .8
+    gap = available * .05 / 3
+    assert abs(gui.center.winfo_rooty() - top - gap) <= 1
+    assert abs(gui.hand_panel.winfo_rooty() - gui.center.winfo_rooty() - gui.center.winfo_height() - gap) <= 2
+    assert abs(root.winfo_rooty() + root.winfo_height() - gui.hand_panel.winfo_rooty() - gui.hand_panel.winfo_height() - gap) <= 2
+    assert gui.seats[2].winfo_y() < gui.play_area.winfo_y() < gui.seats[0].winfo_y()
+    assert gui.seats[3].winfo_x() < gui.play_area.winfo_x() < gui.seats[1].winfo_x()
 root.withdraw()
 from turn_log import format_turn_log
 from agents.rule_agent import RuleAgent
@@ -62,10 +97,11 @@ gui.selected_cards = list(action.cards)
 gui._play_selected()
 assert gui.turns >= 1
 assert gui.player_plays[0] != '等待出牌'
-assert gui.play_labels[0].cget('text').startswith('AI1  ')
+assert gui.play_labels[0].cget('text') == ''
+assert gui.play_prompt.cget('text') == ''
 for message in format_turn_log(gui.match, 0, before, gui.turns):
     assert message in gui.log.get('1.0', 'end')
-print('gui: seat positions, 27-card row, 3:2 split, manual play and shared logs verified')
+print('gui: seat positions, 27-card rank stacks, expanded columns, manual play and shared logs verified')
 gui._pause()
 while len(gui.match.finish_order)<4:
     gui.match._take_turn()

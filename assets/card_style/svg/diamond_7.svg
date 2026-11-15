@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="400" viewBox="0 0 250 400" role="img" aria-label="diamond_7">
+  <title>diamond_7</title>
+  <rect x="2.5" y="2.5" width="245" height="395" rx="24" fill="#fdfdfd" stroke="#101010" stroke-width="4" />
+  <path aria-label="7" fill="#e60000" d="M11.344 57.906 L22.875 22.938 L14.094 22.938 C10.656 22.938 8.073 23.385 6.344 24.281 C5.135 24.906 4.135 26.083 3.344 27.812 L2.156 27.812 L5.219 14.656 L30.469 14.656 L16.25 57.906 Z" transform="translate(24.3081 12.7012) scale(1.24855)" id="rank" />
+  <g transform="translate(72.3503 34) scale(0.43)" id="suit-right">
+    <path d="M 50 0 C 39 20 20 39 8 50 C 23 63 40 82 50 100 C 60 82 77 63 92 50 C 80 39 61 20 50 0 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(25 99) scale(0.48)" id="suit-below">
+    <path d="M 50 0 C 39 20 20 39 8 50 C 23 63 40 82 50 100 C 60 82 77 63 92 50 C 80 39 61 20 50 0 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(86.5 199.5) scale(1.35)" id="suit-large">
+    <path d="M 50 0 C 39 20 20 39 8 50 C 23 63 40 82 50 100 C 60 82 77 63 92 50 C 80 39 61 20 50 0 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+</svg>

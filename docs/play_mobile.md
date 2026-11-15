@@ -18,6 +18,11 @@ python play.py
 该入口不加载 LLM 配置或凭据，不包含模型连接、模型统计和防睡眠进程。
 原有 `gui.py`、`viewer.py` 保留各自用途。
 
+桌面牌桌布局由 `presentation/table_view.py` 统一实现，`gui.py` 和 `play.py` 复用，
+离线版通过 `gameplay/offline.py` 驱动对局，不依赖 `presentation/gui.py` 或 LLM 模块。
+新版 Play 沿用 65% 牌桌、30% 记录区、78% 手牌区以及 60%/35% 的高度分配，
+包含五行侧边座位、右上角红心配提示和固定出牌尺寸。
+
 ## 代码边界
 
 结构整理后，根目录文件是兼容入口，正式实现和分层约束见 [项目架构](architecture.md)。

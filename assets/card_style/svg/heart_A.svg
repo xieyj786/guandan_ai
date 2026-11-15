@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="400" viewBox="0 0 250 400" role="img" aria-label="heart_A">
+  <title>heart_A</title>
+  <rect x="2.5" y="2.5" width="245" height="395" rx="24" fill="#fdfdfd" stroke="#101010" stroke-width="4" />
+  <path aria-label="A" fill="#e60000" d="M26.625 44.969 L11.656 44.969 L9.875 49.094 C9.292 50.469 9 51.604 9 52.5 C9 53.688 9.479 54.562 10.438 55.125 C11 55.458 12.385 55.708 14.594 55.875 L14.594 57.031 L0.5 57.031 L0.5 55.875 C2.021 55.646 3.271 55.016 4.25 53.984 C5.229 52.953 6.438 50.823 7.875 47.594 L23.031 13.781 L23.625 13.781 L38.906 48.531 C40.365 51.823 41.562 53.896 42.5 54.75 C43.208 55.396 44.208 55.771 45.5 55.875 L45.5 57.031 L25 57.031 L25 55.875 L25.844 55.875 C27.49 55.875 28.646 55.646 29.312 55.188 C29.771 54.854 30 54.375 30 53.75 C30 53.375 29.937 52.99 29.812 52.594 C29.771 52.406 29.458 51.625 28.875 50.25 Z M25.562 42.656 L19.25 28.062 L12.75 42.656 Z" transform="translate(26.3757 13.7937) scale(1.24855)" id="rank" />
+  <g transform="translate(93.185 34) scale(0.43)" id="suit-right">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(25 99) scale(0.48)" id="suit-below">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(91.5 204.5) scale(1.25)" id="suit-large">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+</svg>

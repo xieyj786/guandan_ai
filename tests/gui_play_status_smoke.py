@@ -31,13 +31,23 @@ for _ in range(400):
         if i in m.finish_order:
             seen_finish = True
             assert states[i][0] == ('头游','二游','三游','末游')[m.finish_order.index(i)]
-            assert not states[i][1]
+            assert states[i][1] == gui.player_cards[i]
+            assert gui.play_faces[i].cards == [(c.suit.value, int(c.rank)) for c in gui.player_cards[i]]
         if states[i][0] == 'PASS':
             seen_pass = True
             strip = gui.play_faces[i]
             assert strip.status_text == 'PASS' and not strip.cards
             texts = [strip.itemcget(item, 'text') for item in strip.find_all() if strip.type(item) == 'text']
             assert texts == ['PASS']
+            button = gui.control_buttons['新局']
+            x1, y1, x2, y2 = strip.coords('status_box')
+            from tkinter import ttk, font as tkfont
+            status_font = ttk.Style(root).lookup(button.cget('style') or 'TButton', 'font') or 'TkDefaultFont'
+            assert abs((x2-x1+1) - tkfont.Font(root, font=status_font).measure('MMMMM')) < .01
+            assert abs((y2-y1+1) - button.winfo_height()) < .01
+            from tkinter import ttk, font as tkfont
+            expected = ttk.Style(root).lookup(button.cget('style') or 'TButton', 'font') or 'TkDefaultFont'
+            assert tkfont.Font(root, font=strip.itemcget('status_text', 'font')).actual() == tkfont.Font(root, font=expected).actual()
     if previous_last is not None and m.last_play is None:
         seen_reclaim = True
         # 收回牌权时不清空所有玩家的历史展示数据。

@@ -9,6 +9,36 @@ from agents.rule_agent import RuleAgent
 
 root = tk.Tk(); root.withdraw()
 gui = GuandanGUI(root)
+root.deiconify()
+for geometry in ('1000x680', '1200x850'):
+    root.geometry(geometry)
+    root.update()
+    assert not hasattr(gui, 'llm_switch') and not hasattr(gui, 'llm_stats_label')
+    assert gui.play_prompt.cget('text') == ''
+    assert abs(gui.center.winfo_width() / root.winfo_width() - .65) < .002
+    assert abs(gui.log.master.winfo_width() / root.winfo_width() - .30) < .002
+    assert abs(gui.hand_panel.winfo_width() / root.winfo_width() - .78) < .002
+    tiles = gui.hand_row.winfo_children()
+    assert len(tiles) == 27
+    columns = {}
+    for tile in tiles:
+        columns.setdefault(tile.rank, []).append(tile)
+        assert tile.winfo_y() + tile.winfo_height() <= gui.hand_row.winfo_height()
+    assert len({group[0].winfo_x() for group in columns.values()}) == len(columns)
+    for group in columns.values():
+        assert len({tile.winfo_x() for tile in group}) == 1
+        assert len({tile.winfo_y() for tile in group}) == len(group)
+    assert all(tile.winfo_x() + tile.winfo_width() <= gui.hand_row.winfo_width() for tile in tiles)
+    assert gui.action_row.winfo_x() >= gui.hand_row.winfo_x() + gui.hand_row.winfo_width()
+    buttons = list(gui.action_buttons.values())
+    button_y = [button.winfo_rooty() for button in buttons]
+    assert button_y == sorted(set(button_y))
+    for button in buttons:
+        assert button.winfo_ismapped()
+        assert button.winfo_rooty() + button.winfo_height() <= gui.action_row.winfo_rooty() + gui.action_row.winfo_height()
+    assert gui.hand_hint.winfo_rooty() > buttons[-1].winfo_rooty() + buttons[-1].winfo_height()
+    assert gui.hand_hint.winfo_rooty() + gui.hand_hint.winfo_height() <= gui.action_row.winfo_rooty() + gui.action_row.winfo_height()
+root.withdraw()
 other = tk.Tk(); other.withdraw()
 viewer = GuandanViewer(other)
 gui.seed = 41
@@ -51,12 +81,20 @@ for step in range(20000):
         kind = gui.match.tribute_session.pending[0]
         assert not gui.running
         gui.selected_cards = [gui.match.tribute_session.eligible_cards()[0]]
-        gui._submit_exchange(kind)
+        button = gui.action_buttons['进还贡']
+        assert button.cget('text') == ('进贡' if kind == 'tribute' else '还贡')
+        assert str(gui.action_buttons['提示'].cget('state')) == 'disabled'
+        button.invoke()
         counts[kind] += 1
     elif gui.match.current_player == 0 and not gui.match._is_finished(0):
         assert not gui.running
         action = RuleAgent('test').decide(gui.match._build_observation(0))
-        gui.selected_cards = list(action.cards)
+        hand_before = list(gui.match.hands[0])
+        turns_before = gui.turns
+        gui.action_buttons['提示'].invoke()
+        assert gui.turns == turns_before and gui.match.hands[0] == hand_before
+        assert gui.selected_cards == list(action.cards)
+        assert str(gui.action_buttons['进还贡'].cget('state')) == 'disabled'
         if action.action_type == 'play':
             gui._play_selected()
         else:

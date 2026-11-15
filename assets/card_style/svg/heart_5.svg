@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="400" viewBox="0 0 250 400" role="img" aria-label="heart_5">
+  <title>heart_5</title>
+  <rect x="2.5" y="2.5" width="245" height="395" rx="24" fill="#fdfdfd" stroke="#101010" stroke-width="4" />
+  <path aria-label="5" fill="#e60000" d="M9.75 14.656 L29.594 14.656 L26.438 22.719 L9.75 22.719 L8.156 26.938 C15.344 27.208 20.875 29 24.75 32.312 C27.937 35.042 29.531 38.438 29.531 42.5 C29.531 45.104 28.792 47.651 27.312 50.141 C25.833 52.63 23.75 54.547 21.062 55.891 C18.375 57.234 15.427 57.906 12.219 57.906 C8.76 57.906 6.104 57.26 4.25 55.969 C2.958 55.052 2.312 54.01 2.312 52.844 C2.312 51.948 2.651 51.156 3.328 50.469 C4.005 49.781 4.792 49.438 5.688 49.438 C6.5 49.438 7.323 49.604 8.156 49.938 C8.99 50.271 10.417 51.146 12.438 52.562 C13.708 53.438 14.802 54.042 15.719 54.375 C16.365 54.625 17.094 54.75 17.906 54.75 C19.615 54.75 21.068 54.125 22.266 52.875 C23.464 51.625 24.062 50.125 24.062 48.375 C24.062 44.708 22.229 41.729 18.562 39.438 C14.896 37.146 10.271 36 4.688 36 C4.125 36 3.281 36.01 2.156 36.031 Z" transform="translate(24.3081 12.7012) scale(1.24855)" id="rank" />
+  <g transform="translate(71.2578 34) scale(0.43)" id="suit-right">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(25 99) scale(0.48)" id="suit-below">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(91.5 204.5) scale(1.25)" id="suit-large">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+</svg>

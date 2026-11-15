@@ -7,13 +7,16 @@ name = "guandan-ai"
 version = "0.1.0"
 description = "Cross-platform Guandan desktop game with rule-based AI and optional cloud or local LLM"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["Pillow>=9.1", "resvg-py>=0.4,<0.6"]
 
 [tool.setuptools]
 py-modules = ["benchmark", "benchmark_gui", "benchmark_report", "benchmark_runtime", "llm_activity", "match_runner", "game_series", "gui", "play", "play_game", "viewer", "card_ui", "play_display", "turn_log", "llm_settings", "llm_dialog"]
 
 [tool.setuptools.packages.find]
-include = ["game_engine*", "agents*", "presentation*", "strategy*", "gameplay*", "integrations*", "evaluation*"]
+include = ["game_engine*", "agents*", "presentation*", "strategy*", "gameplay*", "integrations*", "evaluation*", "assets.card_style"]
+
+[tool.setuptools.package-data]
+"assets.card_style" = ["svg/*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

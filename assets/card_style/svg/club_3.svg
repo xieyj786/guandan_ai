@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="400" viewBox="0 0 250 400" role="img" aria-label="club_3">
+  <title>club_3</title>
+  <rect x="2.5" y="2.5" width="245" height="395" rx="24" fill="#fdfdfd" stroke="#101010" stroke-width="4" />
+  <path aria-label="3" fill="#101010" d="M9.469 35.781 L9.469 34.688 C11.844 34 13.49 33.359 14.406 32.766 C15.323 32.172 16.115 31.266 16.781 30.047 C17.448 28.828 17.781 27.594 17.781 26.344 C17.781 24.615 17.151 23.13 15.891 21.891 C14.63 20.651 13.062 20.031 11.188 20.031 C8.271 20.031 5.792 21.573 3.75 24.656 L2.594 24.25 C4.094 20.771 6.016 18.156 8.359 16.406 C10.703 14.656 13.312 13.781 16.188 13.781 C19.125 13.781 21.547 14.677 23.453 16.469 C25.359 18.26 26.312 20.354 26.312 22.75 C26.312 24.312 25.87 25.818 24.984 27.266 C24.099 28.714 22.708 29.99 20.812 31.094 C23.25 32.281 25.109 33.745 26.391 35.484 C27.672 37.224 28.312 39.406 28.312 42.031 C28.312 46.448 26.714 50.203 23.516 53.297 C20.318 56.391 16.031 57.938 10.656 57.938 C7.073 57.938 4.458 57.344 2.812 56.156 C1.625 55.323 1.031 54.25 1.031 52.938 C1.031 51.979 1.375 51.161 2.062 50.484 C2.75 49.807 3.542 49.469 4.438 49.469 C5.125 49.469 5.771 49.615 6.375 49.906 C6.708 50.073 7.891 50.984 9.922 52.641 C11.953 54.297 13.854 55.125 15.625 55.125 C17.167 55.125 18.49 54.516 19.594 53.297 C20.698 52.078 21.25 50.531 21.25 48.656 C21.25 45.802 20.25 43.172 18.25 40.766 C16.25 38.359 13.323 36.698 9.469 35.781 Z" transform="translate(25.7392 14.1471) scale(1.22291)" id="rank" />
+  <g transform="translate(70.3622 34) scale(0.43)" id="suit-right">
+    <ellipse cx="50" cy="26" rx="24" ry="24" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="24" cy="63" rx="23" ry="23" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="76" cy="63" rx="23" ry="23" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="50" cy="57" rx="16" ry="16" fill="#101010" stroke="none" stroke-width="2" />
+    <path d="M 48 59 C 48 80 39 94 29 100 L 71 100 C 61 94 52 80 52 59 Z" fill="#101010" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(25 99) scale(0.48)" id="suit-below">
+    <ellipse cx="50" cy="26" rx="24" ry="24" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="24" cy="63" rx="23" ry="23" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="76" cy="63" rx="23" ry="23" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="50" cy="57" rx="16" ry="16" fill="#101010" stroke="none" stroke-width="2" />
+    <path d="M 48 59 C 48 80 39 94 29 100 L 71 100 C 61 94 52 80 52 59 Z" fill="#101010" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(85.5 198.5) scale(1.37)" id="suit-large">
+    <ellipse cx="50" cy="26" rx="24" ry="24" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="24" cy="63" rx="23" ry="23" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="76" cy="63" rx="23" ry="23" fill="#101010" stroke="none" stroke-width="2" />
+    <ellipse cx="50" cy="57" rx="16" ry="16" fill="#101010" stroke="none" stroke-width="2" />
+    <path d="M 48 59 C 48 80 39 94 29 100 L 71 100 C 61 94 52 80 52 59 Z" fill="#101010" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+</svg>

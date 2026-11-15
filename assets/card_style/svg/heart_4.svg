@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="400" viewBox="0 0 250 400" role="img" aria-label="heart_4">
+  <title>heart_4</title>
+  <rect x="2.5" y="2.5" width="245" height="395" rx="24" fill="#fdfdfd" stroke="#101010" stroke-width="4" />
+  <path aria-label="4" fill="#e60000" d="M1.594 41.062 L21.719 13.781 L25.531 13.781 L25.531 41.062 L29.406 41.062 L29.406 47.531 L25.531 47.531 L25.531 57.031 L16.938 57.031 L16.938 47.531 L1.594 47.531 Z M4.625 41.062 L16.938 41.062 L16.938 24.344 Z" transform="translate(25.0098 13.7937) scale(1.24855)" id="rank" />
+  <g transform="translate(71.7248 34) scale(0.43)" id="suit-right">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(25 99) scale(0.48)" id="suit-below">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+  <g transform="translate(91.5 204.5) scale(1.25)" id="suit-large">
+    <path d="M 50 96 C 43 83 2 57 2 29 C 2 -2 39 -8 50 24 C 61 -8 98 -2 98 29 C 98 57 57 83 50 96 Z" fill="#e60000" stroke="none" stroke-width="0" stroke-linejoin="round" stroke-linecap="round" />
+  </g>
+</svg>
