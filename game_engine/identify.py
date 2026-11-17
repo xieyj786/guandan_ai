@@ -13,7 +13,8 @@
       能压过上家的解释中最大的一个（没有上家则取整体最大的一个）。
 
 其他约定：
-    - 顺子/同花顺固定 5 张；连对固定3档；钢板（2档及以上）允许变长；
+    - 同点数炸弹只能为4～8张，红心级牌百搭计入总张数，不能突破8张上限。例如七张5加一张红心级牌可组成八张5炸弹；七张5加两张红心级牌共9张，不构成合法炸弹。
+    - 顺子/同花顺固定 5 张；木板固定3组对子；钢板固定2组三张，两者均为6张；
     - 顺子/连对/钢板不含王；普通2可参与，另支持特殊顺子 A-2-3-4-5；
     - 五张同花色加逢人配补缺口，视为同花顺（比普通顺子更大）；
     - "三带二"为临时开发牌型：三张 + 一对（对子可以是王对子），大小由三张决定；
@@ -120,7 +121,7 @@ def enumerate_interpretations(cards: list[Card], level_rank: Rank, use_wildcards
     if n == 6:
         results += _run_interpretations(cards, wild, counts, group=2, min_len=3,
                                         category=CardTypeCategory.CONSECUTIVE_PAIRS)
-    if n >= 6 and n % 3 == 0:
+    if n == 6:
         results += _run_interpretations(cards, wild, counts, group=3, min_len=2,
                                         category=CardTypeCategory.PLATE)
     return results

@@ -4,19 +4,14 @@
 
 ## 中文
 
-用户指定 guandan_ai 与 guandan_claude 共用参考设计。`reference.png` 为完整保留的用户原图，
-`preview.svg` 为设计预览。实际牌面由 `presentation/cards.py` 绘制（根目录 `card_ui.py` 保留兼容接口），不截取或拉伸参考图。
+桌面版从 `svg/` 直接加载 54 张独立牌面，在 Tk 显示时按所需大小渲染并缓存。`reference.png`、旧总览和旧图集可用于历史对照。
 
-- 纵向牌，宽高约1:2；白底、细黑圆角边框。
-- 上方居中大花色，下方居中粗衬线点数；A/K/Q/J不用人物插画，不用四角小标。
-- 黑桃/梅花为 `#101010`；红心/方块为 `#c81018`。
-- 10与单字符点数使用相同字号，避免过小。
-- 红心配加金色外框，选牌加蓝色框并抬高，保留白底。
-- 大小王依据 `joker_reference.png` 绘制可缩放小丑图案：小王黑红帽子、黑色 JOKER；大王红黄帽子、红色 JOKER。保留现有牌面比例与状态边框。
-- GUI中的PASS由 `play_display.py` 单独绘制：约三张牌宽，白框贴合粗体文字高度。
-  PASS不是牌型，也不改变共享的54种牌面。
+- 普通牌画布为 250×400，大小王为 360×480。桌面显示统一使用普通牌的宽高比，大小王按同一牌框缩放。
+- 普通牌的牌点右侧和下方各有同花色小标志。2～10 和 A 使用偏右下方的单个大花色。
+- J/Q/K 使用单幅正向彩色人物。大小王使用彩色半身小丑、左侧竖排 JOKER 和两角星形。
+- SVG 不包含位图或外部字体。红心配、选牌、末手描边及 PASS 由界面绘制。
 
-组件仅依赖Tkinter，不依赖规则引擎的Card/Suit/Rank类：
+组件依赖 Tkinter、Pillow 和 resvg-py，不依赖规则引擎的Card/Suit/Rank类：
 
 ```python
 from card_ui import CardFace, CardStrip
@@ -35,21 +30,11 @@ strip.set_cards([('spade', 14), ('heart', 13), ('club', 12), ('diamond', 11)])
 
 ## English
 
-The user selected a shared design for guandan_ai and guandan_claude. `reference.png` preserves the
-original artwork; `preview.svg` is a design preview. Runtime cards are drawn by `presentation/cards.py` (with the compatible
-`card_ui.py` import), rather than cropped or stretched from the reference.
+The desktop app loads the 54 standalone cards from `svg/` and caches images rendered at the sizes Tk needs. The older atlas and previews are retained for reference.
 
-- Portrait cards, approximately 1:2 width/height, white fill and thin rounded black borders.
-- Large centered suit above a bold serif rank; no court-card portraits or corner indices.
-- Spades/clubs use `#101010`; hearts/diamonds use `#c81018`.
-- Ten uses the same font size as single-character ranks.
-- Heart wild cards have gold borders; selected cards have blue borders and are lifted, retaining white fill.
-- Jokers follow `joker_reference.png` using scalable jester paths: a black/red cap and black JOKER
-  for the small joker, a red/yellow cap and red JOKER for the big joker. Card proportions and state borders are retained.
-- GUI PASS is separately drawn by `play_display.py`, about three card widths with a white box fitted
-  to the bold text height. It is a status marker, not an additional card type.
+Regular cards use a 250×400 viewBox. Jokers use 360×480. The desktop renderer fits jokers to the same width and height as regular cards. Regular cards show matching suit marks to the right of and below the rank. Number cards and aces have one large suit mark. J, Q, and K show one upright portrait. Each joker shows a colour jester bust, vertical JOKER lettering, and two stars.
 
-The Tkinter-only components are independent of engine Card/Suit/Rank classes. The example above
+The card component uses Tkinter, Pillow, and resvg-py. The example above
 works in either project. Suits are spade/heart/club/diamond/joker; ranks are 2–16 (J=11, A=14,
 small joker=15, big joker=16). Composition and colors follow the reference; exact pixels and font
 outlines are not guaranteed.

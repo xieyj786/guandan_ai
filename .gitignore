@@ -14,3 +14,5 @@ dist/
 /gui.exe
 
 /SHA256SUMS.txt
+/.backups/
+/.sync-backups/

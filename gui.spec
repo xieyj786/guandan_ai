@@ -5,7 +5,7 @@ a = Analysis(
     ['gui.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[("assets/card_style/svg/*.svg", "assets/card_style/svg")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

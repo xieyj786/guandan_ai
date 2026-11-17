@@ -106,6 +106,10 @@ gui._pause()
 while len(gui.match.finish_order)<4:
     gui.match._take_turn()
 gui._finish_round_if_needed()
+assert gui.round_number == 1 and len(gui.match.finish_order) == 4
+assert gui.pending_round_result is not None
+assert '本局结束' in gui.status.cget('text')
+gui._advance_one()
 assert gui.round_number==2 and gui.match.tribute_outcome is not None
 if gui.match.tribute_pending:
     gui.selected_cards = [gui.match.tribute_session.eligible_cards()[0]]

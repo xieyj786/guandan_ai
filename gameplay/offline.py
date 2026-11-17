@@ -14,7 +14,9 @@ from gameplay.turn_log import format_turn_log
 
 
 class PlayGame:
-    def __init__(self, agent_factory=RuleAgent):
+    def __init__(self, agent_factory=RuleAgent, *, defer_round_start=False):
+        self.defer_round_start = defer_round_start
+        self.pending_round_result = None
         self.agent_factory = agent_factory
         self.seed = 42
         self.human_index = 0
@@ -36,6 +38,7 @@ class PlayGame:
         self.series_finished = False
         self.team_levels = {"A": Rank.TWO, "B": Rank.TWO}
         self.leading_team = "A"
+        self.pending_round_result = None
         self.events.clear()
         self._start_round()
 
@@ -94,6 +97,10 @@ class PlayGame:
         return [hand[i] for i in indices]
 
     def step(self) -> bool:
+        if self.pending_round_result is not None:
+            result, self.pending_round_result = self.pending_round_result, None
+            self._start_round(previous_result=result)
+            return True
         m = self.match
         if m is None or self.series_finished or m.tribute_pending or self.human_can_play:
             self.prepare_human_turn()
@@ -159,10 +166,13 @@ class PlayGame:
         self.team_levels = progress.team_levels
         if progress.finished:
             self.series_finished = True
-            self.events.append(f"{winner}队A级双下，比赛结束。")
+            self.events.append(f"{winner}队双升赢得本局比赛。")
             return
         self.events.append(f"下一局全桌打 {self.team_levels[winner].name}；升级进度：A队{self.team_levels['A'].name}级，B队{self.team_levels['B'].name}级。")
-        self._start_round(previous_result=result)
+        if self.defer_round_start:
+            self.pending_round_result = result
+        else:
+            self._start_round(previous_result=result)
 
     def drain_events(self) -> list[str]:
         events, self.events = self.events, []

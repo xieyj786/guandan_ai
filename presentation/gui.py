@@ -18,10 +18,11 @@ from game_engine.round_result import RoundResult
 from game_engine.card import Card, Rank, Suit, card_display, single_card_power
 from gameplay.turn_log import format_turn_log
 from presentation.table_view import GameTableView
+from presentation.hand_tabs import HandTabsMixin
 from gameplay.match import Match
 from gameplay.progression import advance_levels
 
-class GuandanGUI(GameTableView):
+class GuandanGUI(HandTabsMixin, GameTableView):
     BG = "#123c35"
     PANEL = "#0d2d29"
     GOLD = "#e9c46a"
@@ -92,6 +93,8 @@ class GuandanGUI(GameTableView):
         self._pause()
         self.active_llm_settings = replace(self.llm_settings, enabled=self.llm_enabled.get())
         self.human_mode = human_mode
+        self.pending_round_result = None
+        self.hand_tab = 0
         self.failed = False
         for name in ("单步", "看AI对战"):
             self.control_buttons[name].configure(state="disabled" if human_mode else "normal")
@@ -138,6 +141,8 @@ class GuandanGUI(GameTableView):
                 and not self.match.is_finished(self.human_index))
 
     def _await_human(self):
+        if self.pending_round_result is not None:
+            return False
         m = self.match
         if m is None:
             return False
@@ -163,8 +168,9 @@ class GuandanGUI(GameTableView):
         if self.series_finished or self.failed or self._await_human():
             return
         self.running = True
-        self.status.configure(text="人机对战 · 其他玩家行动中")
-        self.after_id = self.root.after(650, self.step)
+        if self.pending_round_result is None:
+            self.status.configure(text="人机对战 · 其他玩家行动中")
+        self.after_id = self.root.after(3000 if self.pending_round_result is not None else 900, self.step)
 
     def _hint_human(self):
         if not self._human_can_play():
@@ -346,6 +352,11 @@ class GuandanGUI(GameTableView):
             self._pause()
             return
         try:
+            if self.pending_round_result is not None:
+                result, self.pending_round_result = self.pending_round_result, None
+                self._start_round(previous_result=result)
+                self._await_human()
+                return
             if self._await_human():
                 return
             if self.turns >= 3000:
@@ -372,7 +383,7 @@ class GuandanGUI(GameTableView):
             self._record_turn(index, before)
             self._finish_round_if_needed()
             self._draw_table()
-            if not self.series_finished and not self._await_human():
+            if not self.series_finished and self.pending_round_result is None and not self._await_human():
                 self.status.configure(text=f"第{self.turns}步 · 轮到AI{self.match.current_player+1}")
         except Exception as exc:
             self._pause()
@@ -438,10 +449,10 @@ class GuandanGUI(GameTableView):
             self._record_turn(index, before)
             self._finish_round_if_needed()
             self._draw_table()
-            if not self.series_finished and not self._await_human():
+            if not self.series_finished and self.pending_round_result is None and not self._await_human():
                 self.status.configure(text=f"第{self.turns}步 · 轮到AI{match.current_player+1}")
             if self.running:
-                self.after_id = self.root.after(650, self.step)
+                self.after_id = self.root.after(3000 if self.pending_round_result is not None else 900, self.step)
         except Exception:
             self._pause()
             self.failed = True
@@ -454,7 +465,7 @@ class GuandanGUI(GameTableView):
             return
         self._advance_one()
         if self.running and self.pending_job is None:
-            self.after_id = self.root.after(650, self.step)
+            self.after_id = self.root.after(3000 if self.pending_round_result is not None else 900, self.step)
 
     def single_step(self):
         if self.human_mode:
@@ -505,7 +516,8 @@ class GuandanGUI(GameTableView):
             return
         self._log(f"下一局全桌打 {self.team_levels[winner].name}；升级进度：A队{self.team_levels['A'].name}级，B队{self.team_levels['B'].name}级。")
         self.selected_cards = []
-        self._start_round(previous_result=result)
+        self.pending_round_result = result
+        self.status.configure(text=f"本局结束 · {winner}队获胜，升{result.upgrade_level}级；下一局打{self.team_levels[winner].name}")
 
 def main():
     root = tk.Tk()

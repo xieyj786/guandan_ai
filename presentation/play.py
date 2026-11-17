@@ -7,8 +7,9 @@ from gameplay.offline import PlayGame
 from game_engine.card import Card, card_display
 from strategy.rule_agent import RuleAgent
 from presentation.table_view import GameTableView
+from presentation.hand_tabs import HandTabsMixin
 
-class GuandanPlay(GameTableView):
+class GuandanPlay(HandTabsMixin, GameTableView):
     BG = "#123c35"
     PANEL = "#0d2d29"
     GOLD = "#e9c46a"
@@ -21,7 +22,7 @@ class GuandanPlay(GameTableView):
         self.root.geometry("1200x850")
         self.root.minsize(1000, 680)
         self.root.configure(bg=self.BG)
-        self.game = PlayGame()
+        self.game = PlayGame(defer_round_start=True)
         self.closed = False
         self.running = False
         self.after_id: str | None = None
@@ -99,12 +100,16 @@ class GuandanPlay(GameTableView):
             self._pause()
             self.status.configure(text=f"{self.leading_team}队双升赢得本局比赛")
         self._draw_table()
+        if self.game.pending_round_result is not None:
+            result = self.game.pending_round_result
+            self.status.configure(text=f"本局结束 · {result.winning_team}队获胜，升{result.upgrade_level}级；下一局打{self.team_levels[self.leading_team].name}")
 
     def _pending_exchange_kind(self) -> str | None:
         return self.game.pending_exchange_kind
 
     def new_game(self, human_mode=False):
         self._pause()
+        self.hand_tab = 0
         self.failed = False
         for name in ("单步", "看AI对战"):
             self.control_buttons[name].configure(state="disabled" if human_mode else "normal")
@@ -123,6 +128,8 @@ class GuandanPlay(GameTableView):
         return not self.failed and self.game.human_can_play
 
     def _await_human(self):
+        if self.game.pending_round_result is not None:
+            return False
         m = self.match
         if m is None:
             return False
@@ -148,8 +155,9 @@ class GuandanPlay(GameTableView):
         if self.series_finished or self.failed or self._await_human():
             return
         self.running = True
-        self.status.configure(text="人机对战 · 其他玩家行动中")
-        self.after_id = self.root.after(650, self.step)
+        if self.game.pending_round_result is None:
+            self.status.configure(text="人机对战 · 其他玩家行动中")
+        self.after_id = self.root.after(3000 if self.game.pending_round_result is not None else 900, self.step)
 
     def _hint_human(self):
         if not self._human_can_play():
@@ -252,7 +260,7 @@ class GuandanPlay(GameTableView):
                 return
             self.game.step()
             self._sync_game()
-            if not self.series_finished and not self._await_human():
+            if self.game.pending_round_result is None and not self.series_finished and not self._await_human():
                 self.status.configure(text=f"第{self.turns}步 · 轮到AI{self.match.current_player+1}")
         except Exception as exc:
             self._pause()
@@ -267,7 +275,7 @@ class GuandanPlay(GameTableView):
             return
         self._advance_one()
         if self.running:
-            self.after_id = self.root.after(650, self.step)
+            self.after_id = self.root.after(3000 if self.game.pending_round_result is not None else 900, self.step)
 
     def single_step(self):
         if self.human_mode:

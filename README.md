@@ -9,12 +9,13 @@
 
 ### 启动
 
-Python 3.11+，需安装 Tkinter。运行时仅使用标准库，无需 OpenAI SDK 或 keyring。
+Python 3.11+，需安装 Tkinter。桌面牌面使用 Pillow 和 resvg-py，无需 OpenAI SDK 或 keyring。
 从项目根目录运行：
 
 ```bash
 # macOS
 python3 -m venv .venv
+.venv/bin/python -m pip install .
 .venv/bin/python gui.py
 # 查看四家手牌的规则 AI 观察器
 .venv/bin/python viewer.py
@@ -26,6 +27,7 @@ python3 -m venv .venv
 ```powershell
 # Windows：使用 Windows 本机 Python，不要复制 macOS 的 .venv
 py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install .
 .venv\Scripts\python.exe gui.py
 .venv\Scripts\python.exe viewer.py
 .venv\Scripts\python.exe tests\run_all.py
@@ -179,7 +181,7 @@ The application UI is Chinese; this README and the card-style README are bilingu
 
 ### Running
 
-Requires Python 3.11+ with Tkinter. Runtime uses only the standard library: no OpenAI SDK or keyring.
+Requires Python 3.11+ with Tkinter. Desktop card rendering uses Pillow and resvg-py. The app does not require the OpenAI SDK or keyring.
 Run from the project root using the macOS or Windows commands above. Create a separate virtual
 environment on each platform; never reuse the macOS `.venv` on Windows.
 `gui.py` is the human/observer table, `viewer.py` shows all four hands, and

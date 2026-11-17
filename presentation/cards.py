@@ -128,7 +128,7 @@ def layout_overlapping_hand(tiles: Sequence[CardFace], width: int, *,
 
 
 def layout_rank_stacked_hand(tiles: Sequence[CardFace], width: int, height: int,
-                             *, max_face_width: int = 64) -> float:
+                             *, max_face_width: int = 64, fixed_face_width: int | None = None) -> float:
     """Group equal ranks in columns, exposing each covered card's corner index."""
     columns = {}
     for tile in tiles:
@@ -139,12 +139,16 @@ def layout_rank_stacked_hand(tiles: Sequence[CardFace], width: int, height: int,
     face_width = max(1, min(max_face_width,
                           (width - 4 - max(0, count - 1) * 6) / max(1, count),
                           (height - 10) / (2 + (depth - 1) * .72)))
+    if fixed_face_width is not None:
+        face_width = max(1, fixed_face_width)
     cell_width = round(face_width + 4)
-    step_y = face_width * .72
+    step_x = min(face_width + 6, max(0, (width - cell_width) / max(1, count - 1)))
+    step_y = min(face_width * .72,
+                 max(0, (height - 10 - face_width * 2) / max(1, depth - 1)))
     for col, column in enumerate(columns.values()):
         for row, tile in enumerate(column):
             tile._set_top_alignment(True)
-            tile.place(x=round(col * (face_width + 6)),
+            tile.place(x=round(col * step_x),
                        y=round(row * step_y) + (0 if tile.selected else 6),
                        width=cell_width, height=round(face_width * 2 + 4))
             tk.Misc.lift(tile)

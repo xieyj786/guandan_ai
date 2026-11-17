@@ -92,12 +92,7 @@ class GameTableView:
         self.play_prompt.bind("<Configure>", self._resize_play_label)
         self.hand_panel = tk.Frame(self.table, bg=self.PANEL)
         self.hand_panel.pack_propagate(False)
-        hand_header = tk.Frame(self.hand_panel, bg=self.PANEL)
-        hand_header.pack(fill="x", padx=10, pady=6)
-        tk.Label(hand_header, text="AI1你的手牌", bg=self.PANEL,
-                 fg=self.GOLD, font=("Arial", 12, "bold")).pack(side="left")
-        tk.Label(hand_header, text="金框：红心配", bg=self.PANEL,
-                 fg=self.GOLD, font=("Arial", 12, "bold")).pack(side="right")
+        self._build_hand_header()
         self.play_labels = {}
         self.play_faces = {}
         for index, row, col in ((2, 0, 1), (3, 1, 0), (1, 1, 2), (0, 2, 1)):
@@ -126,6 +121,17 @@ class GameTableView:
         self.log.configure(yscrollcommand=scroll.set)
         self.log.tag_configure("team_a", foreground=self.TEAM_YELLOW)
         self.log.tag_configure("team_b", foreground=self.TEAM_BLUE)
+
+    def _build_hand_header(self):
+        hand_header = tk.Frame(self.hand_panel, bg=self.PANEL)
+        hand_header.pack(fill="x", padx=10, pady=6)
+        tk.Label(hand_header, text="AI1你的手牌", bg=self.PANEL,
+                 fg=self.GOLD, font=("Arial", 12, "bold")).pack(side="left")
+        tk.Label(hand_header, text="金框：红心配", bg=self.PANEL,
+                 fg=self.GOLD, font=("Arial", 12, "bold")).pack(side="right")
+
+    def _hand_cards(self):
+        return self.match.hands[0]
 
     def _schedule_region_layout(self, event):
         if event.widget in (self.root, self.control_buttons["新局"],
@@ -166,14 +172,19 @@ class GameTableView:
         width = max(1, width if width is not None else self.hand_row.winfo_width())
         layout_rank_stacked_hand(
             self.hand_tiles, width, max(1, self.hand_row.winfo_height()),
+            fixed_face_width=getattr(self, "hand_card_width", None),
             max_face_width=76)
 
     def _resize_table_cards(self, event):
         # Seat captions already occupy the two text lines outside play_area.
         # Reserve the slots' margins and leave 4px around each of three card rows.
         face_width = max(1, ((event.height - 8) // 3 - 8) // 2)
+        self.table_card_width = face_width
+        # Size follows the table geometry, never the remaining hand or stack depth.
+        self.hand_card_width = max(1, round(face_width * 1.10))
         for faces in self.play_faces.values():
             faces.set_card_width(face_width)
+        self._layout_hand()
 
     def _resize_play_label(self, event: tk.Event) -> None:
         widget = event.widget
@@ -247,15 +258,7 @@ class GameTableView:
         for tile in self.hand_row.winfo_children():
             tile.destroy()
         self.hand_tiles = []
-        for col, card in enumerate(sorted(m.hands[0], key=lambda c: single_card_power(c, m.level_rank))):
-            selected = any(card is item for item in self.selected_cards)
-            tile = CardFace(self.hand_row, card.suit.value, int(card.rank), background=self.PANEL,
-                            wildcard=card.suit == Suit.HEART and card.rank == m.level_rank,
-                            selected=selected)
-            tile.configure(cursor="hand2")
-            tile.bind("<Button-1>", lambda event, c=card: self._toggle_card(c))
-            self.hand_tiles.append(tile)
-        self._layout_hand()
+        self._render_hand()
         can_act = self._human_can_play()
         pending = self._pending_exchange_kind()
         states = {
@@ -297,6 +300,18 @@ class GameTableView:
         self.action_buttons["进还贡"].configure(
             text="进贡" if pending == "tribute" else "还贡" if pending == "return" else "进/还贡")
         self._flash_action_buttons()
+
+    def _render_hand(self):
+        m = self.match
+        for col, card in enumerate(sorted(self._hand_cards(), key=lambda c: single_card_power(c, m.level_rank))):
+            selected = any(card is item for item in self.selected_cards)
+            tile = CardFace(self.hand_row, card.suit.value, int(card.rank), background=self.PANEL,
+                            wildcard=card.suit == Suit.HEART and card.rank == m.level_rank,
+                            selected=selected)
+            tile.configure(cursor="hand2")
+            tile.bind("<Button-1>", lambda event, c=card: self._toggle_card(c))
+            self.hand_tiles.append(tile)
+        self._layout_hand()
 
     def _stop_action_flash(self):
         """Cancel the previous timer before redrawing or destroying its widgets."""

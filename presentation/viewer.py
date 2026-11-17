@@ -14,7 +14,7 @@ from game_engine.card import Rank, Suit, card_display, single_card_power
 from gameplay.progression import advance_levels
 from gameplay.match import Match
 from gameplay.turn_log import format_turn_log
-from presentation.cards import CardFace, CardStrip
+from presentation.cards import FELT, CardFace, CardStrip, layout_overlapping_hand
 
 
 class GuandanViewer:
@@ -50,7 +50,7 @@ class GuandanViewer:
         self.leading_team = "A"
         self.seed = tk.StringVar(value="42")
         self.level = tk.StringVar(value="2")
-        self.speed = tk.StringVar(value="650")
+        self.speed = tk.StringVar(value="900")
         self.status = tk.StringVar()
         self.center = tk.StringVar(value="等待领出")
         self._build_ui()
@@ -64,7 +64,7 @@ class GuandanViewer:
                  font=("Microsoft YaHei UI", 16, "bold")).pack(side="left", padx=(0, 18))
         for label, variable, values in (
             ("起始级牌", self.level, [str(i) for i in range(2, 11)] + ["J", "Q", "K", "A"]),
-            ("间隔(ms)", self.speed, ["100", "300", "650", "1000", "1500"]),
+            ("间隔(ms)", self.speed, ["100", "300", "650", "900", "1000", "1200", "1500", "2000"]),
         ):
             tk.Label(toolbar, text=label, bg=self.PANEL, fg="white").pack(side="left", padx=4)
             ttk.Combobox(toolbar, textvariable=variable, values=values, state="readonly", width=5).pack(side="left")
@@ -82,11 +82,16 @@ class GuandanViewer:
         tk.Label(self.root, textvariable=self.status, bg=self.BG, fg=self.GOLD,
                  anchor="w", font=("Microsoft YaHei UI", 11)).pack(fill="x", padx=18, pady=8)
         level_bar = tk.Frame(self.root, bg=self.BG)
-        level_bar.pack(fill="x", padx=18, pady=(0, 8))
+        level_bar.pack(fill="x", padx=(18, 14), pady=(0, 8))
         self.level_a_status = tk.Label(level_bar, bg=self.BG, fg=self.TEAM_YELLOW, anchor="w", font=("Microsoft YaHei UI", 10, "bold"))
         self.level_a_status.pack(side="left", padx=(0, 24))
         self.level_b_status = tk.Label(level_bar, bg=self.BG, fg=self.TEAM_BLUE, anchor="w", font=("Microsoft YaHei UI", 10, "bold"))
         self.level_b_status.pack(side="left")
+        sidebar_heading = tk.Frame(level_bar, bg=self.BG, width=290)
+        sidebar_heading.pack(side="right", fill="y")
+        sidebar_heading.pack_propagate(False)
+        tk.Label(sidebar_heading, text="当前出牌", bg=self.BG, fg=self.GOLD,
+                 font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w")
         body = tk.Frame(self.root, bg=self.BG)
         body.pack(fill="both", expand=True, padx=14, pady=(0, 14))
         table = tk.Frame(body, bg=self.BG)
@@ -103,16 +108,17 @@ class GuandanViewer:
                              font=("Microsoft YaHei UI", 11, "bold"))
             title.pack(fill="x")
             cards = tk.Frame(panel, bg=self.PANEL)
-            cards.pack(anchor="w", pady=4)
+            cards.pack(fill="both", expand=True, pady=4)
+            cards.bind("<Configure>", self._resize_hand)
             self.panels[i] = (panel, title, cards)
-        sidebar = tk.Frame(body, bg=self.PANEL, width=290, padx=10, pady=10)
-        sidebar.pack(side="right", fill="y", padx=(12, 0))
-        sidebar.pack_propagate(False)
-        tk.Label(sidebar, text="当前出牌", bg=self.PANEL, fg=self.GOLD,
-                 font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w")
+        sidebar_column = tk.Frame(body, bg=self.BG, width=290)
+        sidebar_column.pack(side="right", fill="y", padx=(12, 0), pady=3)
+        sidebar_column.pack_propagate(False)
+        sidebar = tk.Frame(sidebar_column, bg=self.PANEL, padx=10, pady=10)
+        sidebar.pack(fill="both", expand=True)
         tk.Label(sidebar, textvariable=self.center, bg=self.PANEL, fg="white", justify="left",
-                 wraplength=260, font=("Microsoft YaHei UI", 11)).pack(fill="x", pady=10)
-        self.play_faces = CardStrip(sidebar, background=self.PANEL, height=94)
+                 anchor="w", wraplength=260, font=("Microsoft YaHei UI", 11)).pack(fill="x", pady=(0, 10))
+        self.play_faces = CardStrip(sidebar, background=FELT, height=120)
         self.play_faces.pack(fill="x", pady=(0, 10))
         tk.Label(sidebar, text="出牌记录", bg=self.PANEL, fg=self.GOLD).pack(anchor="w")
         log_frame = tk.Frame(sidebar)
@@ -190,6 +196,7 @@ class GuandanViewer:
         self.log.delete("1.0", "end")
         self.log.configure(state="disabled")
         self._log(f"新局：种子 {seed}，级牌 {self.level.get()}。每人 27 张。\nA队：AI1 / AI3；B队：AI2 / AI4。")
+        self.pending_round_result = None
         self._start_round(seed)
         self._draw_table()
 
@@ -209,6 +216,14 @@ class GuandanViewer:
         self.log.see("end")
         self.log.configure(state="disabled")
 
+    def _resize_hand(self, event):
+        self._layout_hand(event.widget, event.width)
+
+    @staticmethod
+    def _layout_hand(area, width):
+        max_face_width = max(1, min(50, (area.winfo_height() - 9) // 2))
+        layout_overlapping_hand(area.winfo_children(), width, max_face_width=max_face_width)
+
     def _draw_table(self):
         m = self.match
         if m is None:
@@ -225,11 +240,10 @@ class GuandanViewer:
             title.configure(text=f"{'▶ ' if active else ''}AI{i+1} · {team}队 · 剩余 {len(m.hands[i])} 张{rank}", fg=team_color)
             for widget in area.winfo_children():
                 widget.destroy()
-            for j, card in enumerate(sorted(m.hands[i], key=lambda c: single_card_power(c, m.level_rank))):
-                CardFace(area, card.suit.value, int(card.rank), width=28, height=54,
-                         background=self.PANEL,
-                         wildcard=card.suit == Suit.HEART and card.rank == m.level_rank).grid(
-                             row=j//14, column=j%14, padx=1, pady=1)
+            for card in sorted(m.hands[i], key=lambda c: single_card_power(c, m.level_rank)):
+                CardFace(area, card.suit.value, int(card.rank), background=self.PANEL,
+                         wildcard=card.suit == Suit.HEART and card.rank == m.level_rank)
+            self._layout_hand(area, area.winfo_width())
         if m.last_play is not None and m.last_player is not None:
             self.center.set(f"AI{m.last_player+1} · {m.last_play.category.name}")
             self.play_faces.set_cards([(c.suit.value, int(c.rank)) for c in m.last_play.cards], int(m.level_rank))
@@ -246,6 +260,11 @@ class GuandanViewer:
         self.level_b_status.configure(text=f"B队进度：{self.team_levels['B'].name}")
 
     def _advance_one(self):
+        if self.pending_round_result is not None:
+            result, self.pending_round_result = self.pending_round_result, None
+            self._start_round(int(self.seed.get()), previous_result=result)
+            self._draw_table()
+            return
         m = self.match
         if m is None or len(m.finish_order) == 4 or self.failed:
             self._pause()
@@ -296,7 +315,7 @@ class GuandanViewer:
                 self._log(f"{winner}队A级双下，比赛结束。")
             else:
                 self._log(f"下一局全桌打 {self.team_levels[winner].name}；升级进度：A队{self.team_levels['A'].name}级，B队{self.team_levels['B'].name}级。")
-                self._start_round(int(self.seed.get()), previous_result=result)
+                self.pending_round_result = result
                 if was_running:
                     self.running = True
                     self.auto_button.configure(text="暂停")
@@ -327,7 +346,7 @@ class GuandanViewer:
             m.apply_action(idx, action)
             self._complete_turn(m, idx, before)
             if self.running:
-                self.after_id = self.root.after(int(self.speed.get()), self.step)
+                self.after_id = self.root.after(3000 if self.pending_round_result is not None else int(self.speed.get()), self.step)
         except Exception as exc:
             self._pause()
             self.failed = True
@@ -345,7 +364,7 @@ class GuandanViewer:
         if self.running:
             self._pause()
             self._draw_table()
-        elif self.match and len(self.match.finish_order) < 4 and not self.failed:
+        elif self.match and (len(self.match.finish_order) < 4 or self.pending_round_result is not None) and not self.failed:
             self.running = True
             self.auto_button.configure(text="暂停")
             self.step()
@@ -356,7 +375,7 @@ class GuandanViewer:
             return
         self._advance_one()
         if self.running and self.pending_job is None:
-            self.after_id = self.root.after(int(self.speed.get()), self.step)
+            self.after_id = self.root.after(3000 if self.pending_round_result is not None else int(self.speed.get()), self.step)
 
     def close(self):
         self.closed = True

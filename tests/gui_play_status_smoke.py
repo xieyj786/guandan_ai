@@ -23,8 +23,12 @@ for _ in range(400):
     if gui.match is not m:
         break
     states = [gui._play_display_state(i) for i in range(4)]
-    assert sum(status == '等待出牌' for status, _ in states) == 1
-    assert states[m.current_player][0] == '等待出牌'
+    if len(m.finish_order) == 4:
+        assert not any(status == '等待出牌' for status, _ in states)
+        assert gui.pending_round_result is not None
+    else:
+        assert sum(status == '等待出牌' for status, _ in states) == 1
+        assert states[m.current_player][0] == '等待出牌'
     for i in range(4):
         if i != actor:
             assert gui.player_cards[i] == previous_cards[i]
