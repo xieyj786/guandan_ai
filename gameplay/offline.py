@@ -10,6 +10,7 @@ from game_engine.card import Card, Rank
 from game_engine.round_result import RoundResult
 from gameplay.progression import advance_levels
 from gameplay.match import Match
+from gameplay.randomness import SeedSequence
 from gameplay.turn_log import format_turn_log
 
 
@@ -18,7 +19,9 @@ class PlayGame:
         self.defer_round_start = defer_round_start
         self.pending_round_result = None
         self.agent_factory = agent_factory
-        self.seed = 42
+        self.seed = None
+        self.randomness = SeedSequence()
+        self.round_records = []
         self.human_index = 0
         self.human_mode = False
         self.match: Match | None = None
@@ -32,7 +35,9 @@ class PlayGame:
         self.events: list[str] = []
 
     def new_game(self, human_mode=False, seed: int | None = None):
-        self.seed = self.seed + 1 if seed is None else seed
+        self.seed = seed
+        self.randomness = SeedSequence(seed)
+        self.round_records = []
         self.human_mode = human_mode
         self.round_number = 0
         self.series_finished = False
@@ -50,13 +55,14 @@ class PlayGame:
         self.match = Match(
             agents=[self.agent_factory(f"AI{i+1}") for i in range(4)],
             level_rank=self.team_levels[self.leading_team],
-            seed=self.seed + self.round_number - 1, verbose=False,
+            seed=self.randomness.for_round(self.round_number), verbose=False,
             event_callback=self.events.append, use_wildcards=True,
             team_levels=dict(self.team_levels), previous_result=previous_result,
         )
         self.events.append(f"第 {self.round_number} 局发牌：每人 27 张")
         try:
             self.match.prepare(interactive_player="AI1" if self.human_mode else None)
+            self.round_records.append(dict(self.match.deal_record, round_number=self.round_number))
         finally:
             self.match.event_callback = None
 
@@ -190,6 +196,8 @@ class PlayGame:
         m = self.match
         return {
             "round_number": self.round_number, "turns": self.turns,
+            "random_mode": self.randomness.mode,
+            "round_seed": m.seed if m else None,
             "human_mode": self.human_mode, "human_index": self.human_index,
             "series_finished": self.series_finished,
             "team_levels": {team: int(rank) for team, rank in self.team_levels.items()},

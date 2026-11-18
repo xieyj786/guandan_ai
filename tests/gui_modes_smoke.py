@@ -11,9 +11,23 @@ root = tk.Tk(); root.withdraw()
 gui = GuandanGUI(root)
 other = tk.Tk(); other.withdraw()
 viewer = GuandanViewer(other)
-gui.seed = 41
+gui.random_controls.mode.set("测试与复盘")
+gui.random_controls.seed.set("42")
+gui.random_controls.refresh()
+viewer.random_controls.mode.set("测试与复盘")
+viewer.new_game()
 gui.new_game()
 assert not gui.human_mode
+root.update()
+assert gui.table.winfo_y() >= gui.random_controls.row.winfo_y() + gui.random_controls.row.winfo_height()
+assert gui.random_controls.entry.winfo_manager() == 'pack'
+# Changing pending mode/seed must not alter current series or interrupt next round.
+gui.random_controls.mode.set("正常游戏")
+gui.random_controls.seed.set("invalid")
+assert gui.randomness.base_seed == 42
+# Restore pending test settings for the later new-game checks.
+gui.random_controls.mode.set("测试与复盘")
+gui.random_controls.seed.set("42")
 for _ in range(250):
     gui.single_step()
     viewer.single_step()
@@ -35,7 +49,7 @@ viewer.close()
 print('observer matches viewer for 250 actions; pause/reset timers verified', flush=True)
 
 # 使用规则代理提供测试选择，仍通过人工按钮入口执行；生产代码不替人出牌。
-gui.seed = 100  # 固定覆盖新策略下的进贡和还贡
+gui.random_controls.seed.set("101")  # 固定覆盖进贡和还贡
 gui.start_human_game()
 assert gui.human_mode
 assert gui.match.current_player == gui.match.opening_deal.first_player

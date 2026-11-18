@@ -13,8 +13,10 @@ from presentation.llm_dialog import LLMDialog
 from game_engine.card import Rank, Suit, card_display, single_card_power
 from gameplay.progression import advance_levels
 from gameplay.match import Match
+from presentation.random_controls import RandomControls
+from gameplay.randomness import REPLAY
 from gameplay.turn_log import format_turn_log
-from presentation.cards import FELT, CardFace, CardStrip, layout_overlapping_hand
+from presentation.cards import FELT, CardFace, CardStrip
 
 
 class GuandanViewer:
@@ -68,14 +70,20 @@ class GuandanViewer:
         ):
             tk.Label(toolbar, text=label, bg=self.PANEL, fg="white").pack(side="left", padx=4)
             ttk.Combobox(toolbar, textvariable=variable, values=values, state="readonly", width=5).pack(side="left")
-        tk.Label(toolbar, text="种子", bg=self.PANEL, fg="white").pack(side="left", padx=4)
-        ttk.Entry(toolbar, textvariable=self.seed, width=7).pack(side="left")
         ttk.Button(toolbar, text="新局", command=self.new_game).pack(side="left", padx=5)
         ttk.Button(toolbar, text="单步", command=self.single_step).pack(side="left", padx=5)
         self.auto_button = ttk.Button(toolbar, text="自动播放", command=self.toggle_auto)
         self.auto_button.pack(side="left", padx=5)
         llm_bar = tk.Frame(self.root, bg=self.PANEL, padx=14, pady=5)
         llm_bar.pack(fill="x")
+        # Viewer-only compact row: LLM on the left, mode flush to the right.
+        self.random_controls = RandomControls(llm_bar)
+        self.seed = self.random_controls.seed
+        row = self.random_controls.row
+        row.pack_configure(side="right", fill="none", padx=0, pady=0)
+        mode = next(w for w in row.winfo_children() if isinstance(w, ttk.Combobox))
+        mode.pack_configure(side="right")
+        self.random_controls.hint.pack_configure(side="left", padx=12)
         ttk.Button(llm_bar, text="LLM设置", command=self.open_llm_settings).pack(side="left")
         ttk.Checkbutton(llm_bar, text="接入 LLM", variable=self.llm_enabled,
                         command=self._toggle_llm).pack(side="left", padx=12)
@@ -87,7 +95,7 @@ class GuandanViewer:
         self.level_a_status.pack(side="left", padx=(0, 24))
         self.level_b_status = tk.Label(level_bar, bg=self.BG, fg=self.TEAM_BLUE, anchor="w", font=("Microsoft YaHei UI", 10, "bold"))
         self.level_b_status.pack(side="left")
-        sidebar_heading = tk.Frame(level_bar, bg=self.BG, width=290)
+        sidebar_heading = tk.Frame(level_bar, bg=self.BG, width=319)
         sidebar_heading.pack(side="right", fill="y")
         sidebar_heading.pack_propagate(False)
         tk.Label(sidebar_heading, text="当前出牌", bg=self.BG, fg=self.GOLD,
@@ -111,14 +119,14 @@ class GuandanViewer:
             cards.pack(fill="both", expand=True, pady=4)
             cards.bind("<Configure>", self._resize_hand)
             self.panels[i] = (panel, title, cards)
-        sidebar_column = tk.Frame(body, bg=self.BG, width=290)
+        sidebar_column = tk.Frame(body, bg=self.BG, width=319)
         sidebar_column.pack(side="right", fill="y", padx=(12, 0), pady=3)
         sidebar_column.pack_propagate(False)
         sidebar = tk.Frame(sidebar_column, bg=self.PANEL, padx=10, pady=10)
         sidebar.pack(fill="both", expand=True)
         tk.Label(sidebar, textvariable=self.center, bg=self.PANEL, fg="white", justify="left",
-                 anchor="w", wraplength=260, font=("Microsoft YaHei UI", 11)).pack(fill="x", pady=(0, 10))
-        self.play_faces = CardStrip(sidebar, background=FELT, height=120)
+                 anchor="w", wraplength=289, font=("Microsoft YaHei UI", 11)).pack(fill="x", pady=(0, 10))
+        self.play_faces = CardStrip(sidebar, background=FELT, height=132)
         self.play_faces.pack(fill="x", pady=(0, 10))
         tk.Label(sidebar, text="出牌记录", bg=self.PANEL, fg=self.GOLD).pack(anchor="w")
         log_frame = tk.Frame(sidebar)
@@ -179,12 +187,14 @@ class GuandanViewer:
         self.auto_button.configure(text="自动播放")
 
     def new_game(self):
-        self._pause()
         try:
-            seed = int(self.seed.get())
+            randomness = self.random_controls.selection()
         except ValueError:
             self.status.set("种子请输入整数，再点击新局。")
             return
+        self._pause()
+        self.randomness = randomness
+        self.round_records = []
         faces = {"J": 11, "Q": 12, "K": 13, "A": 14}
         level = Rank(faces[self.level.get()] if self.level.get() in faces else int(self.level.get()))
         self.round_number = 0
@@ -195,20 +205,23 @@ class GuandanViewer:
         self.log.configure(state="normal")
         self.log.delete("1.0", "end")
         self.log.configure(state="disabled")
-        self._log(f"新局：种子 {seed}，级牌 {self.level.get()}。每人 27 张。\nA队：AI1 / AI3；B队：AI2 / AI4。")
+        self._log(f"新局：{self.randomness.mode}，级牌 {self.level.get()}。每人 27 张。\nA队：AI1 / AI3；B队：AI2 / AI4。")
         self.pending_round_result = None
-        self._start_round(seed)
+        self._start_round()
         self._draw_table()
 
-    def _start_round(self, seed, previous_result=None):
+    def _start_round(self, seed=None, previous_result=None):
         self.round_number += 1
         self.turns = 0
-        self.match = Match(self._make_agents(), level_rank=self.team_levels[self.leading_team], seed=seed + self.round_number - 1, verbose=False, use_wildcards=True, team_levels=dict(self.team_levels), previous_result=previous_result)
+        self.match = Match(self._make_agents(), level_rank=self.team_levels[self.leading_team], seed=(seed + self.round_number - 1 if seed is not None else self.randomness.for_round(self.round_number)), verbose=False, use_wildcards=True, team_levels=dict(self.team_levels), previous_result=previous_result)
         self._log(f"第 {self.round_number} 局发牌：每人 27 张")
         # viewer 自行记录逐手出牌，只在准备阶段接收进贡事件，避免重复日志。
         self.match.event_callback = self._log
         self.match.prepare()
         self.match.event_callback = None
+        self.round_records.append(dict(self.match.deal_record, round_number=self.round_number))
+        if self.randomness.mode == REPLAY:
+            self._log(f"测试与复盘：第 {self.round_number} 局种子 {self.match.seed}")
 
     def _log(self, message):
         self.log.configure(state="normal")
@@ -221,8 +234,17 @@ class GuandanViewer:
 
     @staticmethod
     def _layout_hand(area, width):
-        max_face_width = max(1, min(50, (area.winfo_height() - 9) // 2))
-        layout_overlapping_hand(area.winfo_children(), width, max_face_width=max_face_width)
+        max_face_width = max(1, min(55, (area.winfo_height() - 9) // 2))
+        tiles = area.winfo_children()
+        # Keep exactly half of each card visible, shrinking cards to fit all 27.
+        span = 1 + max(0, len(tiles) - 1) * .5
+        face_width = max(1, min(max_face_width, width / span - 4))
+        cell_width = face_width + 4
+        for index, tile in enumerate(tiles):
+            tile._set_top_alignment(False)
+            tile.place(x=round(index * cell_width * .5), y=0 if tile.selected else 5,
+                       width=round(cell_width), height=round(face_width * 2 + 4))
+            tk.Misc.lift(tile)
 
     def _draw_table(self):
         m = self.match
@@ -262,7 +284,7 @@ class GuandanViewer:
     def _advance_one(self):
         if self.pending_round_result is not None:
             result, self.pending_round_result = self.pending_round_result, None
-            self._start_round(int(self.seed.get()), previous_result=result)
+            self._start_round(previous_result=result)
             self._draw_table()
             return
         m = self.match

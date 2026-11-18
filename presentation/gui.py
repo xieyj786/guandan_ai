@@ -20,6 +20,8 @@ from gameplay.turn_log import format_turn_log
 from presentation.table_view import GameTableView
 from presentation.hand_tabs import HandTabsMixin
 from gameplay.match import Match
+from presentation.random_controls import RandomControls
+from gameplay.randomness import REPLAY
 from gameplay.progression import advance_levels
 
 class GuandanGUI(HandTabsMixin, GameTableView):
@@ -57,7 +59,7 @@ class GuandanGUI(HandTabsMixin, GameTableView):
         self.action_highlights = {}
         self.human_mode = False
         self.failed = False
-        self.seed = 42
+        self.seed = None
         self.match: Match | None = None
         self.round_number = 0
         self.series_finished = False
@@ -77,6 +79,8 @@ class GuandanGUI(HandTabsMixin, GameTableView):
         return (("LLM设置", self.open_llm_settings),)
 
     def _build_extra_controls(self, controls):
+        self.random_controls = RandomControls(controls.master)
+        self.random_controls.row.bind("<Configure>", lambda _: self.root.after_idle(self._layout_regions))
         self.llm_switch = ttk.Checkbutton(controls, text="接入 LLM", variable=self.llm_enabled, command=self._toggle_llm)
         self.llm_switch.pack(side="left", padx=12)
         if sys.platform == 'darwin':
@@ -90,7 +94,14 @@ class GuandanGUI(HandTabsMixin, GameTableView):
         return pending[0] if pending is not None else None
 
     def new_game(self, human_mode=False):
+        try:
+            randomness = self.random_controls.selection()
+        except ValueError:
+            self.status.configure(text="测试种子请输入整数，再开始新游戏")
+            return
         self._pause()
+        self.randomness = randomness
+        self.round_records = []
         self.active_llm_settings = replace(self.llm_settings, enabled=self.llm_enabled.get())
         self.human_mode = human_mode
         self.pending_round_result = None
@@ -98,7 +109,7 @@ class GuandanGUI(HandTabsMixin, GameTableView):
         self.failed = False
         for name in ("单步", "看AI对战"):
             self.control_buttons[name].configure(state="disabled" if human_mode else "normal")
-        self.seed += 1
+        self.seed = self.randomness.base_seed
         self.round_number = 0
         self.series_finished = False
         self.team_levels = {"A": Rank.TWO, "B": Rank.TWO}
@@ -126,10 +137,13 @@ class GuandanGUI(HandTabsMixin, GameTableView):
         elif config.enabled and self.human_mode:
             self._log("AI1由你控制；本局其他玩家使用规则 AI。可在LLM设置中改选AI2～AI4。")
         level_rank = self.team_levels[self.leading_team]
-        self.match = Match(agents=agents, level_rank=level_rank, verbose=False, seed=self.seed + self.round_number - 1, event_callback=self._on_event, use_wildcards=True, team_levels=dict(self.team_levels), previous_result=previous_result)
+        self.match = Match(agents=agents, level_rank=level_rank, verbose=False, seed=self.randomness.for_round(self.round_number), event_callback=self._on_event, use_wildcards=True, team_levels=dict(self.team_levels), previous_result=previous_result)
         self._log(f"第 {self.round_number} 局发牌：每人 27 张")
         self.match.prepare(interactive_player="AI1" if self.human_mode else None)
         self.match.event_callback = None
+        self.round_records.append(dict(self.match.deal_record, round_number=self.round_number))
+        if self.randomness.mode == REPLAY:
+            self._log(f"测试与复盘：第 {self.round_number} 局种子 {self.match.seed}")
         self.level_a.configure(text=f"本局打 {self.match.level_rank.name}（全桌）　 A队进度：{self.team_levels['A'].name}", fg=self._team_color("A"))
         self.level_b.configure(text=f"B队进度：{self.team_levels['B'].name}", fg=self._team_color("B"))
         self._draw_table()

@@ -29,7 +29,7 @@ jobs:
       - name: Desktop regressions
         shell: pwsh
         run: |
-          foreach ($test in @('gui_smoke', 'gui_hand_tabs_smoke', 'gui_modes_smoke', 'gui_llm_smoke', 'gui_llm_features_smoke', 'gui_play_status_smoke', 'gui_last_hand_badge_smoke', 'gui_layout_stability_smoke', 'benchmark_gui_smoke', 'play_smoke', 'viewer_llm_smoke')) {
+          foreach ($test in @('random_modes_smoke', 'viewer_layout_smoke', 'gui_smoke', 'gui_hand_tabs_smoke', 'gui_modes_smoke', 'gui_llm_smoke', 'gui_llm_features_smoke', 'gui_play_status_smoke', 'gui_last_hand_badge_smoke', 'gui_layout_stability_smoke', 'benchmark_gui_smoke', 'play_smoke', 'viewer_llm_smoke')) {
             python "tests/$test.py"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }

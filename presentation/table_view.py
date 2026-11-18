@@ -143,6 +143,9 @@ class GameTableView:
             return
         button = self.control_buttons["新局"]
         top = button.master.winfo_y() + button.winfo_y() + button.winfo_height()
+        if hasattr(self, "random_controls"):
+            row = self.random_controls.row
+            top = max(top, row.winfo_y() + row.winfo_height())
         width = self.root.winfo_width()
         height = max(1, self.root.winfo_height() - top)
         self.table.place(x=0, y=top, width=width, height=height)

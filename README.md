@@ -75,6 +75,14 @@ tests only; it does not build executables or create Releases. The old `gui.spec`
 - 日志共用 `turn_log.py`，包含动作、排名、接风、规则理由、进还贡及升级。
   牌桌日志显示在窗口内；独立统计窗口 `benchmark_gui.py` 支持日志导出。
 
+### 发牌与随机模式
+
+正常游戏每局独立生成系统随机种子。`gui.py`、`viewer.py` 可切换“测试与复盘”，输入种子后开始新游戏；`play.py` 界面仅使用正常模式。命令行 `match_runner.py`、`game_series.py` 加 `--seed 42` 可复现固定牌局。模式与种子在新游戏生效，不影响当前比赛。
+
+明牌决定起牌人，不用于生成随机种子。发牌不因AI难度或牌力重新平衡；固定种子用于策略对照，不等于完整对局回放。记录字段、导出示例与复现边界见[发牌机制说明](docs/randomness.md)。
+
+观战器将模式选择靠右，与LLM控制同排；四手牌按50%叠放、随可用空间缩放，右侧当前出牌及记录栏加宽10%。
+
 ### 游戏规则
 
 - 两副牌共108张，每人27张。全桌使用同一个本局级牌，双方升级进度独立。
@@ -145,6 +153,7 @@ macOS补充加载 `/etc/ssl/cert.pem`，不关闭TLS或主机名验证。
 | `gui.spec` | 历史打包配方；不再自动构建或发布gui.exe |
 | `tests/` | 无外部依赖规则测试和桌面回归 |
 | `assets/card_style/` | 保留原始参考图、预览与[双语规范](assets/card_style/README.md) |
+| [发牌机制](docs/randomness.md) | 正常/测试模式、明牌、每局种子、记录及复现边界 |
 | [CHANGELOG](CHANGELOG.md) | 本阶段变更与清理记录 |
 | [清理记录](docs/cleanup.md) | 缓存删除清单及哈希、保留项 |
 | [维护说明](docs/maintenance.md) | 接口、验证、遗留限制 |

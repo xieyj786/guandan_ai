@@ -41,8 +41,9 @@ for geometry in ('1000x680', '1200x850'):
 root.withdraw()
 other = tk.Tk(); other.withdraw()
 viewer = GuandanViewer(other)
-gui.seed = 41
-gui.new_game()
+viewer.random_controls.mode.set("测试与复盘")
+viewer.new_game()
+gui.new_game(seed=42)
 assert not gui.human_mode
 assert set(gui.control_buttons) == {"新局", "单步", "看AI对战", "人机对战"}
 for _ in range(250):
@@ -66,8 +67,7 @@ viewer.close()
 print('observer matches viewer for 250 actions; pause/reset timers verified', flush=True)
 
 # 使用规则代理提供测试选择，仍通过人工按钮入口执行；生产代码不替人出牌。
-gui.seed = 100  # 固定覆盖新策略下的进贡和还贡
-gui.start_human_game()
+gui.new_game(human_mode=True, seed=101)  # 固定覆盖进贡和还贡
 assert gui.human_mode
 assert gui.match.current_player == gui.match.opening_deal.first_player
 assert str(gui.control_buttons['看AI对战'].cget('state')) == 'disabled'

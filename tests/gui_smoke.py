@@ -66,6 +66,8 @@ for geometry in ('1000x680', '1200x780'):
     width = root.winfo_width()
     new_button = gui.control_buttons['新局']
     top = new_button.winfo_rooty() + new_button.winfo_height()
+    row = gui.random_controls.row
+    top = max(top, row.winfo_rooty() + row.winfo_height())
     available = root.winfo_rooty() + root.winfo_height() - top
     assert abs(gui.center.winfo_width() - width * .65) <= 1
     assert abs(record.winfo_width() - width * .30) <= 1

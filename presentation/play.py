@@ -107,7 +107,7 @@ class GuandanPlay(HandTabsMixin, GameTableView):
     def _pending_exchange_kind(self) -> str | None:
         return self.game.pending_exchange_kind
 
-    def new_game(self, human_mode=False):
+    def new_game(self, human_mode=False, *, seed=None):
         self._pause()
         self.hand_tab = 0
         self.failed = False
@@ -115,7 +115,7 @@ class GuandanPlay(HandTabsMixin, GameTableView):
             self.control_buttons[name].configure(state="disabled" if human_mode else "normal")
         self._clear_log()
         self.selected_cards = []
-        self.game.new_game(human_mode)
+        self.game.new_game(human_mode, seed=seed)
         self._sync_game()
         self.status.configure(text="AI观察 · 已暂停" if not human_mode else "人机对战")
         if human_mode:

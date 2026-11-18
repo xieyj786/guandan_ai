@@ -8,6 +8,7 @@ from gameplay.contracts import Agent
 from game_engine.card import Rank
 from game_engine.round_result import RoundResult
 from gameplay.match import Match
+from gameplay.randomness import SeedSequence
 
 
 LEVELS = (Rank.TWO, Rank.THREE, Rank.FOUR, Rank.FIVE, Rank.SIX, Rank.SEVEN,
@@ -28,6 +29,8 @@ class GameSeries:
     history: list[RoundResult] = field(default_factory=list, init=False)
     finished: bool = field(default=False, init=False)
 
+    round_records: list[dict] = field(default_factory=list, init=False)
+
     def _emit(self, message: str):
         if self.event_callback:
             self.event_callback(message)
@@ -39,7 +42,7 @@ class GameSeries:
         if self.finished:
             raise RuntimeError("比赛已经结束")
         self.round_number += 1
-        round_seed = None if self.seed is None else self.seed + self.round_number - 1
+        round_seed = SeedSequence(self.seed).for_round(self.round_number)
         self._emit(f"第 {self.round_number} 局开始：级牌 {self.level_rank.name}")
         match = Match(
             agents=self.agents,
@@ -51,6 +54,8 @@ class GameSeries:
             team_levels=dict(self.team_levels),
             previous_result=self.history[-1] if self.history else None,
         )
+        match.prepare()
+        self.round_records.append(dict(match.deal_record, round_number=self.round_number))
         result = match.run()
         self.history.append(result)
 
@@ -82,8 +87,10 @@ class GameSeries:
 
 def main():
     from strategy.rule_agent import RuleAgent
+    from gameplay.randomness import command_seed
+    seed = command_seed()
 
-    series = GameSeries([RuleAgent(f"AI{i}") for i in range(4)], seed=42)
+    series = GameSeries([RuleAgent(f"AI{i}") for i in range(4)], seed=seed)
     series.run()
     print(f"比赛结束，共 {series.round_number} 局，最终级牌：{series.level_rank.name}")
 

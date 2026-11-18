@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from gameplay.contracts import Agent, Observation
+from gameplay.randomness import resolve_seed
 from game_engine.card import Card, Rank, card_display
 from game_engine.card_type import CardType
 from game_engine.comparator import compare_card_type
@@ -53,6 +54,7 @@ class Match:
     tribute_session: Optional[TributeSession] = field(default=None, init=False)
     opening_deal: Optional[OpeningDeal] = field(default=None, init=False)
     prepared: bool = field(default=False, init=False)
+    deal_record: dict = field(default_factory=dict, init=False)
 
     hands: list[list[Card]] = field(default_factory=list, init=False)
     finish_order: list[int] = field(default_factory=list, init=False)
@@ -85,11 +87,21 @@ class Match:
         """发牌并执行上局产生的进还贡；重复调用不重新发牌或重复交换。"""
         if self.prepared:
             return
+        self.seed = resolve_seed(self.seed)
         if self.previous_result is None:
             self.opening_deal = deal_opening(seed=self.seed)
             hands = self.opening_deal.hands
         else:
             hands = deal_hands(seed=self.seed)
+        self.deal_record = {
+            "format": "python-random-v1", "seed": self.seed,
+            "level_rank": int(self.level_rank), "use_wildcards": self.use_wildcards,
+            "team_levels": {k: int(v) for k, v in self.team_levels.items()},
+            "agents": [f"{type(a).__module__}.{type(a).__qualname__}" for a in self.agents],
+            "hands_before_tribute": [[[c.suit.value, int(c.rank)] for c in h] for h in hands],
+            "first_receiver": self.opening_deal.first_receiver if self.opening_deal else None,
+            "first_player": self.opening_deal.first_player if self.opening_deal else None,
+        }
         names = {agent.name: i for i, agent in enumerate(self.agents)}
         outcome = None
         if self.previous_result is not None:
@@ -358,8 +370,10 @@ class Match:
 
 def main():
     from strategy.rule_agent import RuleAgent
+    from gameplay.randomness import command_seed
+    seed = command_seed()
 
-    match = Match(agents=[RuleAgent(f"AI{i}") for i in range(4)])
+    match = Match(agents=[RuleAgent(f"AI{i}") for i in range(4)], seed=seed)
     match.run()
 
 

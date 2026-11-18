@@ -56,7 +56,7 @@ state = game.snapshot()
 
 公开接口：
 
-- `new_game(human_mode=True, seed=...)`：开始比赛；省略种子时递增种子。
+- `new_game(human_mode=True, seed=...)`：开始比赛；省略种子时每局独立使用系统随机种子，指定种子时按基础种子逐局递增。详见[发牌机制](randomness.md)。
 - `snapshot()`：取得独立的字典和列表，可用 `json.dumps()` 序列化。
 - `step()`：让下一名规则 AI 行动一次；等待人工动作或比赛结束时返回 `False`。
 - `play([手牌编号, ...])`：提交 AI1 的出牌。
@@ -64,6 +64,7 @@ state = game.snapshot()
 - `exchange(手牌编号)`：完成当前人工进贡或还贡。
 - `drain_events()`：取出并清空新增文本记录。
 
+状态还包含 `random_mode`（随机模式）及 `round_seed`（本局实际种子）。
 状态包含手牌、桌面各座位上一手、当前玩家、游次、级牌、队伍进度、
 `human_can_play`、`can_pass`、`pending_exchange` 和 `eligible_exchange_indices`。
 按 `human_can_play` / `pending_exchange` 等状态显示操作按钮，否则定时调用 `step()`。
